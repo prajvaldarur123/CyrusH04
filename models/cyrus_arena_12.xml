@@ -1,5 +1,5 @@
 <mujoco model="cyrus">
-  <compiler angle="radian" coordinate="local" />
+  <compiler angle="radian" coordinate="local" meshdir="meshes" autolimits="true" />
   <option timestep="0.002" gravity="0 0 -9.80665" density="1.204" viscosity="0.0000181" integrator="implicitfast" iterations="50" ls_iterations="10" />
 
   <default>
@@ -29,6 +29,14 @@
     <material name="sole_rubber" rgba="0.08 0.08 0.09 1" reflectance="0.05" />
     <material name="finger_pad" rgba="0.15 0.15 0.17 1" reflectance="0.1" />
     <material name="target_glow" rgba="1.0 0.3 0.2 0.7" emission="0.6" />
+      <!-- Parametric CAD Human Foot & Shoe Meshes -->
+    <material name="shoe_upper" rgba="0.13 0.14 0.16 1.0" specular="0.38" shininess="0.45" />
+    <mesh name="human_foot_right" file="human_foot_right.stl" />
+    <mesh name="human_foot_left" file="human_foot_left.stl" />
+    <mesh name="foot_sole_right" file="foot_sole_right.stl" />
+    <mesh name="foot_sole_left" file="foot_sole_left.stl" />
+    <mesh name="ankle_ft_sensor" file="ankle_ft_sensor.stl" />
+    <mesh name="shin_clevis_frame" file="shin_clevis_frame.stl" />
   </asset>
 
   <worldbody>

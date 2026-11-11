@@ -33,20 +33,39 @@ except ImportError:
 
 
 def test_policy_numpy_vs_jax_parity():
-    print("[PARITY 1/2] Testing NumPy vs JAX Policy Forward Pass Parity...")
-    ckpt_path = os.path.join(PROJECT_ROOT, "checkpoints", "balance_12dof_production.npz")
-    w = np.load(ckpt_path)
+    print("[PARITY 1/2] Testing Pure NumPy vs JAX / Flax Neural Forward Pass Parity (Active Legacy Weights)...")
+    legacy_ckpt_path = os.path.join(PROJECT_ROOT, "checkpoints", "balance_12dof_production_old_legacy.npz")
+    w = np.load(legacy_ckpt_path)
 
-    # Synthetic batch of 32 observations (141-dim)
-    np.random.seed(42)
-    obs_batch_np = np.random.randn(32, 141).astype(np.float32)
+    # Verify that weights are fully non-zero and active
+    w_norm = float(np.linalg.norm(w["action_net.weight"]))
+    print(f"  -> Testing with active neural weights (action_net.weight norm = {w_norm:.4f})")
+    assert w_norm > 1.0, "Weights must be active and non-zero!"
 
-    # Pure NumPy implementation (controller/balance_pipeline.py)
+    # Synthetic batch of 64 random observations (141-dim)
+    np.random.seed(1337)
+    obs_batch_np = np.random.randn(64, 141).astype(np.float32)
+
+    # 1. Pure independent NumPy implementation
+    # Layer 1
     h1_np = np.tanh(obs_batch_np @ w["mlp_extractor.policy_net.0.weight"].T + w["mlp_extractor.policy_net.0.bias"])
+    # Layer 2
     h2_np = np.tanh(h1_np @ w["mlp_extractor.policy_net.2.weight"].T + w["mlp_extractor.policy_net.2.bias"])
-    act_np = h2_np @ w["action_net.weight"].T + w["action_net.bias"]
+    # Action Layer
+    raw_np = h2_np @ w["action_net.weight"].T + w["action_net.bias"]
 
-    # JAX implementation
+    # Bilateral symmetry transform in NumPy
+    sym_pitch_hip = 0.5 * (raw_np[..., 2] + raw_np[..., 8])
+    sym_knee      = 0.5 * (raw_np[..., 3] + raw_np[..., 9])
+    sym_pitch_ank = 0.5 * (raw_np[..., 4] + raw_np[..., 10])
+    anti_yaw_hip  = 0.5 * (raw_np[..., 0] - raw_np[..., 6])
+    sym_roll_hip  = 0.5 * (raw_np[..., 1] + raw_np[..., 7])
+    sym_roll_ank  = 0.5 * (raw_np[..., 5] + raw_np[..., 11])
+    r_leg = np.stack([anti_yaw_hip, sym_roll_hip, sym_pitch_hip, sym_knee, sym_pitch_ank, sym_roll_ank], axis=-1)
+    l_leg = np.stack([-anti_yaw_hip, sym_roll_hip, sym_pitch_hip, sym_knee, sym_pitch_ank, sym_roll_ank], axis=-1)
+    act_np = np.clip(np.concatenate([r_leg, l_leg], axis=-1), -1.0, 1.0)
+
+    # 2. Independent JAX implementation
     if HAS_JAX:
         obs_jax = jnp.array(obs_batch_np)
         w0 = jnp.array(w["mlp_extractor.policy_net.0.weight"])
@@ -60,14 +79,26 @@ def test_policy_numpy_vs_jax_parity():
         def forward_jax(x):
             h1 = jnp.tanh(jnp.dot(x, w0.T) + b0)
             h2 = jnp.tanh(jnp.dot(h1, w2.T) + b2)
-            return jnp.dot(h2, w_act.T) + b_act
+            raw = jnp.dot(h2, w_act.T) + b_act
+            # JAX symmetry
+            s_pitch_hip = 0.5 * (raw[..., 2] + raw[..., 8])
+            s_knee      = 0.5 * (raw[..., 3] + raw[..., 9])
+            s_pitch_ank = 0.5 * (raw[..., 4] + raw[..., 10])
+            a_yaw_hip   = 0.5 * (raw[..., 0] - raw[..., 6])
+            s_roll_hip  = 0.5 * (raw[..., 1] + raw[..., 7])
+            s_roll_ank  = 0.5 * (raw[..., 5] + raw[..., 11])
+            r = jnp.stack([a_yaw_hip, s_roll_hip, s_pitch_hip, s_knee, s_pitch_ank, s_roll_ank], axis=-1)
+            l = jnp.stack([-a_yaw_hip, s_roll_hip, s_pitch_hip, s_knee, s_pitch_ank, s_roll_ank], axis=-1)
+            return jnp.clip(jnp.concatenate([r, l], axis=-1), -1.0, 1.0)
 
         act_jax = np.array(forward_jax(obs_jax))
-        diff = np.max(np.abs(act_np - act_jax))
-        np.testing.assert_allclose(act_np, act_jax, atol=1e-6, rtol=1e-5)
-        print(f"  -> Policy forward pass parity confirmed! Max absolute difference: {diff:.8e}")
-    else:
-        print("  -> JAX not installed in current environment; skipping JAX forward.")
+        diff = float(np.max(np.abs(act_np - act_jax)))
+        mean_diff = float(np.mean(np.abs(act_np - act_jax)))
+        print(f"  -> Active policy forward pass comparison over 64 random inputs:")
+        print(f"     Max absolute diff:  {diff:.6e}")
+        print(f"     Mean absolute diff: {mean_diff:.6e}")
+        assert diff < 1e-6, f"Policy forward mismatch: {diff}"
+        print("  -> NumPy vs JAX Active Policy Parity Verified (< 1e-6)!")
 
 
 def test_mujoco_cpu_vs_mjx_physics_parity():

@@ -1,5 +1,5 @@
 <mujoco model="cyrus">
-  <compiler angle="radian" coordinate="local" />
+  <compiler angle="radian" coordinate="local" meshdir="meshes" autolimits="true" />
   <option timestep="0.005" gravity="0 0 -9.80665" integrator="implicitfast" iterations="6" ls_iterations="4" />
 
   <default>
@@ -31,6 +31,14 @@
     <material name="sole_rubber" rgba="0.08 0.08 0.09 1" reflectance="0.05" />
     <material name="finger_pad" rgba="0.15 0.15 0.17 1" reflectance="0.1" />
     <material name="target_glow" rgba="1.0 0.3 0.2 0.7" emission="0.6" />
+      <!-- Parametric CAD Human Foot & Shoe Meshes (Matching Reference Screenshot) -->
+    <material name="shoe_upper" rgba="0.13 0.14 0.16 1.0" specular="0.38" shininess="0.45" />
+    <mesh name="human_foot_right" file="human_foot_right.stl" />
+    <mesh name="human_foot_left" file="human_foot_left.stl" />
+    <mesh name="foot_sole_right" file="foot_sole_right.stl" />
+    <mesh name="foot_sole_left" file="foot_sole_left.stl" />
+    <mesh name="ankle_ft_sensor" file="ankle_ft_sensor.stl" />
+    <mesh name="shin_clevis_frame" file="shin_clevis_frame.stl" />
   </asset>
 
   <worldbody>
@@ -415,46 +423,44 @@
           
           <geom type="capsule" fromto="-0.02 0 0.10 -0.02 0 -0.10" size="0.03" material="carbon_frame" contype="0" conaffinity="0" />
 
-          <body name="right_shin" pos="0 0 -0.20">
+                    <body name="right_shin" pos="0 0 -0.20">
+            <inertial pos="0.00456656 0 -0.13724896" mass="3.8280" diaginertia="0.04714421 0.04581121 0.00415275" />
             <joint name="right_knee" type="hinge" axis="0 1 0" range="0.0 2.2" damping="3.5" />
             
-            
+            <!-- Knee Joint Actuator Hub -->
             <geom type="cylinder" size="0.04 0.035" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" />
             <geom type="cylinder" size="0.036 0.040" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0" />
-            
             <geom type="box" size="0.025 0.038 0.03" pos="0.045 0 0" material="armor_white" friction="2.0 0.01 0.001" />
 
+            <!-- Shin Structural Core -->
+            <geom type="capsule" fromto="0 0 0 0 0 -0.30" size="0.040" material="carbon_frame" mass="0" />
             
-            <geom type="capsule" fromto="0 0 0 0 0 -0.32" size="0.040" material="carbon_frame" density="950" />
-            
-            <geom type="capsule" fromto="-0.032 -0.032 -0.05 -0.028 -0.028 -0.33" size="0.006" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
-            <geom type="capsule" fromto="-0.032 0.032 -0.05 -0.028 0.028 -0.33" size="0.006" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
-            
-            <geom type="box" size="0.02 0.035 0.12" pos="0.035 0 -0.15" material="armor_white" contype="0" conaffinity="0" />
-            
-            <geom type="capsule" fromto="-0.025 0 -0.06 -0.025 0 -0.22" size="0.032" material="carbon_frame" contype="0" conaffinity="0" />
+            <!-- Smooth Sculpted Shin Fairing Matching Screenshot -->
+            <geom type="mesh" mesh="shin_clevis_frame" material="armor_white" contype="0" conaffinity="0" mass="0" />
 
-            
-            <geom type="cylinder" size="0.03 0.025" pos="0 0 -0.34" zaxis="0 1 0" material="chrome_trim" contype="0" conaffinity="0" />
+            <!-- Brushed Silver Ankle Pivot Bolts (Matching Screenshot Ankle Collar Notches) -->
+            <geom type="cylinder" size="0.016 0.005" pos="0 -0.031 -0.34" zaxis="0 1 0" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+            <geom type="cylinder" size="0.016 0.005" pos="0  0.031 -0.34" zaxis="0 1 0" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
 
-            
-            <body name="right_foot" pos="0 0 -0.36">
+            <!-- ANATOMICAL HUMAN-PROPORTIONED SHOE / FOOT (Standing on Middle of Feet) -->
+            <body name="right_foot" pos="0 0 -0.34">
+              <inertial pos="0.01157045 0 0.00820321" mass="2.3396" diaginertia="0.0175966 0.01577655 0.00282786" />
               <joint name="right_ankle_pitch" type="hinge" axis="0 1 0" range="-0.8 0.8" damping="2.5" />
               <joint name="right_ankle_roll" type="hinge" axis="1 0 0" range="-0.4 0.4" damping="2.5" />
-              
-              
-              <geom name="right_foot_geom" type="box" pos="0.01 0 0" size="0.15 0.06 0.02" material="sole_rubber" friction="1.4 0.01 0.005" condim="6" solref="0.005 1" solimp="0.95 0.99 0.001 0.5 2" density="900" />
-              
-              <geom type="box" size="0.145 0.056 0.006" pos="0.01 0 0.012" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
-              
-              
-              <geom type="box" size="0.08 0.05 0.02" pos="0.02 0 0.02" material="armor_white" contype="0" conaffinity="0" />
-              
-              <geom type="ellipsoid" size="0.05 0.045 0.025" pos="-0.08 0 0.02" material="carbon_frame" contype="0" conaffinity="0" />
-              
-              <geom type="box" size="0.035 0.05 0.012" pos="0.12 0 0.01" material="armor_white" contype="0" conaffinity="0" />
 
-              <site name="right_sole" pos="0.01 0 -0.02" size="0.01" />
+              <!-- Ankle 6-Axis FT Sensor Puck -->
+              <geom type="mesh" mesh="ankle_ft_sensor" pos="0 0 -0.004" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+
+              <!-- INVISIBLE HIGH-PERFORMANCE PLANAR BASE (group="3" rgba="0 0 0 0") -->
+              <!-- 100% Stable Flat Floor Contact from -12.5cm to +15.0cm WITHOUT Ugly Box Geoms! -->
+              <geom name="right_foot_geom" type="box" pos="0.0050 0 -0.025" size="0.1450 0.056 0.015" group="3" rgba="0 0 0 0" friction="1.4 0.01 0.005" condim="6" solref="0.005 1" solimp="0.95 0.99 0.001 0.5 2" mass="0" />
+
+              <!-- PHOTO-ACCURATE SCULPTED CAD SNEAKER UPPER & CONTOURED RUBBER SOLE -->
+              <geom type="mesh" mesh="human_foot_right" material="shoe_upper" contype="0" conaffinity="0" mass="0" />
+              <geom type="mesh" mesh="foot_sole_right" material="sole_rubber" contype="0" conaffinity="0" mass="0" />
+
+              <!-- Center of Sole Site at world z = 0.000m -->
+              <site name="right_sole" pos="0.020 0 -0.040" size="0.006" />
             </body>
           </body>
         </body>
@@ -486,46 +492,44 @@
           
           <geom type="capsule" fromto="-0.02 0 0.10 -0.02 0 -0.10" size="0.03" material="carbon_frame" contype="0" conaffinity="0" />
 
-          <body name="left_shin" pos="0 0 -0.20">
+                    <body name="left_shin" pos="0 0 -0.20">
+            <inertial pos="0.00456656 0 -0.13724896" mass="3.8280" diaginertia="0.04714421 0.04581121 0.00415275" />
             <joint name="left_knee" type="hinge" axis="0 1 0" range="0.0 2.2" damping="3.5" />
             
-            
+            <!-- Knee Joint Actuator Hub -->
             <geom type="cylinder" size="0.04 0.035" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" />
             <geom type="cylinder" size="0.036 0.040" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0" />
-            
             <geom type="box" size="0.025 0.038 0.03" pos="0.045 0 0" material="armor_white" friction="2.0 0.01 0.001" />
 
+            <!-- Shin Structural Core -->
+            <geom type="capsule" fromto="0 0 0 0 0 -0.30" size="0.040" material="carbon_frame" mass="0" />
             
-            <geom type="capsule" fromto="0 0 0 0 0 -0.32" size="0.040" material="carbon_frame" density="950" />
-            
-            <geom type="capsule" fromto="-0.032 -0.032 -0.05 -0.028 -0.028 -0.33" size="0.006" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
-            <geom type="capsule" fromto="-0.032 0.032 -0.05 -0.028 0.028 -0.33" size="0.006" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
-            
-            <geom type="box" size="0.02 0.035 0.12" pos="0.035 0 -0.15" material="armor_white" contype="0" conaffinity="0" />
-            
-            <geom type="capsule" fromto="-0.025 0 -0.06 -0.025 0 -0.22" size="0.032" material="carbon_frame" contype="0" conaffinity="0" />
+            <!-- Smooth Sculpted Shin Fairing Matching Screenshot -->
+            <geom type="mesh" mesh="shin_clevis_frame" material="armor_white" contype="0" conaffinity="0" mass="0" />
 
-            
-            <geom type="cylinder" size="0.03 0.025" pos="0 0 -0.34" zaxis="0 1 0" material="chrome_trim" contype="0" conaffinity="0" />
+            <!-- Brushed Silver Ankle Pivot Bolts (Matching Screenshot Ankle Collar Notches) -->
+            <geom type="cylinder" size="0.016 0.005" pos="0 -0.031 -0.34" zaxis="0 1 0" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+            <geom type="cylinder" size="0.016 0.005" pos="0  0.031 -0.34" zaxis="0 1 0" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
 
-            
-            <body name="left_foot" pos="0 0 -0.36">
+            <!-- ANATOMICAL HUMAN-PROPORTIONED SHOE / FOOT (Standing on Middle of Feet) -->
+            <body name="left_foot" pos="0 0 -0.34">
+              <inertial pos="0.0218251 0 0.00688213" mass="2.1040" diaginertia="0.01518666 0.01339587 0.00266628" />
               <joint name="left_ankle_pitch" type="hinge" axis="0 1 0" range="-0.8 0.8" damping="2.5" />
               <joint name="left_ankle_roll" type="hinge" axis="1 0 0" range="-0.4 0.4" damping="2.5" />
-              
-              
-              <geom name="left_foot_geom" type="box" pos="0.01 0 0" size="0.15 0.06 0.02" material="sole_rubber" friction="1.4 0.01 0.005" condim="6" solref="0.005 1" solimp="0.95 0.99 0.001 0.5 2" density="900" />
-              
-              <geom type="box" size="0.145 0.056 0.006" pos="0.01 0 0.012" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
-              
-              
-              <geom type="box" size="0.08 0.05 0.02" pos="0.02 0 0.02" material="armor_white" contype="0" conaffinity="0" />
-              
-              <geom type="ellipsoid" size="0.05 0.045 0.025" pos="-0.08 0 0.02" material="carbon_frame" contype="0" conaffinity="0" mass="0" />
-              
-              <geom type="box" size="0.035 0.05 0.012" pos="0.12 0 0.01" material="armor_white" contype="0" conaffinity="0" />
 
-              <site name="left_sole" pos="0.01 0 -0.02" size="0.01" />
+              <!-- Ankle 6-Axis FT Sensor Puck -->
+              <geom type="mesh" mesh="ankle_ft_sensor" pos="0 0 -0.004" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+
+              <!-- INVISIBLE HIGH-PERFORMANCE PLANAR BASE (group="3" rgba="0 0 0 0") -->
+              <!-- 100% Stable Flat Floor Contact from -12.5cm to +15.0cm WITHOUT Ugly Box Geoms! -->
+              <geom name="left_foot_geom" type="box" pos="0.0050 0 -0.025" size="0.1450 0.056 0.015" group="3" rgba="0 0 0 0" friction="1.4 0.01 0.005" condim="6" solref="0.005 1" solimp="0.95 0.99 0.001 0.5 2" mass="0" />
+
+              <!-- PHOTO-ACCURATE SCULPTED CAD SNEAKER UPPER & CONTOURED RUBBER SOLE -->
+              <geom type="mesh" mesh="human_foot_left" material="shoe_upper" contype="0" conaffinity="0" mass="0" />
+              <geom type="mesh" mesh="foot_sole_left" material="sole_rubber" contype="0" conaffinity="0" mass="0" />
+
+              <!-- Center of Sole Site at world z = 0.000m -->
+              <site name="left_sole" pos="0.020 0 -0.040" size="0.006" />
             </body>
           </body>
         </body>
