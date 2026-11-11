@@ -35,7 +35,6 @@ for p in [ROBOTICS_ROOT, PROJECT_ROOT]:
 
 from controller.balance_pipeline import (
     load_verified_checkpoint,
-    enforce_bilateral_symmetry,
     EMAActionFilter,
     get_robot_mass,
     get_robot_com,
@@ -48,6 +47,7 @@ from controller.balance_pipeline import (
     ACTION_SCALE_VEC,
     EMA_ALPHA
 )
+from controller.stepping_recovery import ReactiveSteppingController, SteppingState
 
 XML_PATH = os.path.join(PROJECT_ROOT, "models", "cyrus_12dof_mjx.xml")
 MANIFEST_PATH = os.path.join(PROJECT_ROOT, "checkpoints", "manifest.json")
@@ -62,8 +62,12 @@ class BalanceTester:
 
         self.pelvis_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "pelvis")
         self.torso_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "torso_upper")
+        self.r_hip_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "right_thigh")
+        self.l_hip_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "left_thigh")
         self.r_sole_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "right_sole")
         self.l_sole_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "left_sole")
+
+        self.stepping_ctrl = ReactiveSteppingController()
 
         self.pose_name = pose_name.lower()
         self.protocol = protocol.lower()
@@ -153,6 +157,7 @@ class BalanceTester:
         verify_settled_equilibrium(self.model, self.data, self.ctrl_nom, tol_fz=1.0, tol_qvel=1e-3, max_steps=400)
 
         self.ema_filter.reset()
+        self.stepping_ctrl = ReactiveSteppingController()
         self.prev_act = np.zeros(12, dtype=np.float32)
         init_obs = self.get_obs(self.prev_act)
         self.obs_buf = np.tile(init_obs, 3)
@@ -196,6 +201,31 @@ class BalanceTester:
                 self.model.actuator_ctrlrange[:, 0],
                 self.model.actuator_ctrlrange[:, 1]
             )
+
+            # Dynamic Stepping: When Capture Point breaches foot limits, swing leg takes an unconstrained recovery step
+            mujoco.mj_subtreeVel(self.model, self.data)
+            com_pos = self.data.subtree_com[self.pelvis_id].copy()
+            com_vel = self.data.subtree_linvel[self.pelvis_id].copy()
+            r_sole = self.data.site_xpos[self.r_sole_id].copy()
+            l_sole = self.data.site_xpos[self.l_sole_id].copy()
+            r_contact = bool(r_sole[2] < 0.045)
+            l_contact = bool(l_sole[2] < 0.045)
+            cur_time = step * dt_ctrl
+
+            step_info = self.stepping_ctrl.update(
+                cur_time, com_pos, com_vel, r_sole, l_sole, r_contact, l_contact
+            )
+            if step_info["state"] == SteppingState.SWING_EXECUTION:
+                swing_leg = step_info["swing_leg"]
+                foot_target = step_info["desired_foot_pos"]
+                hip_id = self.r_hip_id if swing_leg == "right" else self.l_hip_id
+                hip_pos = self.data.xpos[hip_id].copy()
+                q_swing = self.stepping_ctrl.inverse_kinematics_leg(hip_pos, foot_target)
+                if swing_leg == "right":
+                    target_ctrl[:6] = np.clip(q_swing, self.model.actuator_ctrlrange[:6, 0], self.model.actuator_ctrlrange[:6, 1])
+                else:
+                    target_ctrl[6:] = np.clip(q_swing, self.model.actuator_ctrlrange[6:, 0], self.model.actuator_ctrlrange[6:, 1])
+
             self.data.ctrl[:] = target_ctrl
 
             # Physics simulation substeps (e.g. 8 substeps of 0.0025s = 0.02s)

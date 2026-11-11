@@ -24,7 +24,6 @@ for p in [ROBOTICS_ROOT, PROJECT_ROOT]:
 
 from controller.balance_pipeline import (
     load_verified_checkpoint,
-    enforce_bilateral_symmetry,
     EMAActionFilter,
     get_robot_mass,
     verify_settled_equilibrium,
@@ -33,6 +32,7 @@ from controller.balance_pipeline import (
     EMA_ALPHA,
     ROBUST_ROLL_GAINS
 )
+from controller.stepping_recovery import ReactiveSteppingController, SteppingState
 
 XML_PATH = os.path.join(PROJECT_ROOT, "models", "cyrus_12dof_mjx.xml")
 
@@ -61,6 +61,8 @@ def run_random_pushes(speed_mps: float, num_pushes: int, checkpoint_path: str, r
     d = mujoco.MjData(m)
     pelvis_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, "pelvis")
     torso_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, "torso_upper")
+    r_hip_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, "right_thigh")
+    l_hip_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, "left_thigh")
     r_sole_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_SITE, "right_sole")
     l_sole_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_SITE, "left_sole")
 
@@ -133,6 +135,7 @@ def run_random_pushes(speed_mps: float, num_pushes: int, checkpoint_path: str, r
         verify_settled_equilibrium(m, d, ctrl_nom, tol_fz=1.0, tol_qvel=1e-3, max_steps=400)
 
         ema_filter = EMAActionFilter(alpha=EMA_ALPHA, dim=12)
+        stepping_ctrl = ReactiveSteppingController()
         prev_act = np.zeros(12, dtype=np.float32)
         init_obs = get_obs(prev_act)
         obs_buf = np.tile(init_obs, 3)
@@ -163,6 +166,31 @@ def run_random_pushes(speed_mps: float, num_pushes: int, checkpoint_path: str, r
                 m.actuator_ctrlrange[:, 0],
                 m.actuator_ctrlrange[:, 1]
             )
+
+            # Dynamic Stepping Integration: analytical 6-DoF IK swing trajectory when Capture Point breaches limits
+            mujoco.mj_subtreeVel(m, d)
+            com_pos = d.subtree_com[pelvis_id].copy()
+            com_vel = d.subtree_linvel[pelvis_id].copy()
+            r_sole = d.site_xpos[r_sole_id].copy()
+            l_sole = d.site_xpos[l_sole_id].copy()
+            r_contact = bool(r_sole[2] < 0.045)
+            l_contact = bool(l_sole[2] < 0.045)
+            cur_time = step * dt_ctrl
+
+            step_info = stepping_ctrl.update(
+                cur_time, com_pos, com_vel, r_sole, l_sole, r_contact, l_contact
+            )
+            if step_info["state"] == SteppingState.SWING_EXECUTION:
+                swing_leg = step_info["swing_leg"]
+                foot_target = step_info["desired_foot_pos"]
+                hip_id = r_hip_id if swing_leg == "right" else l_hip_id
+                hip_pos = d.xpos[hip_id].copy()
+                q_swing = stepping_ctrl.inverse_kinematics_leg(hip_pos, foot_target)
+                if swing_leg == "right":
+                    target_ctrl[:6] = np.clip(q_swing, m.actuator_ctrlrange[:6, 0], m.actuator_ctrlrange[:6, 1])
+                else:
+                    target_ctrl[6:] = np.clip(q_swing, m.actuator_ctrlrange[6:, 0], m.actuator_ctrlrange[6:, 1])
+
             d.ctrl[:] = target_ctrl
 
             substeps = int(round(dt_ctrl / dt_physics))
