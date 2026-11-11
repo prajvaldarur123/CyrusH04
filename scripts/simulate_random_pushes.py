@@ -63,8 +63,12 @@ def run_random_pushes(speed_mps: float, num_pushes: int, checkpoint_path: str, r
     torso_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, "torso_upper")
     r_hip_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, "right_thigh")
     l_hip_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, "left_thigh")
+    r_foot_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, "right_foot")
+    l_foot_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, "left_foot")
     r_sole_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_SITE, "right_sole")
     l_sole_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_SITE, "left_sole")
+    r_geom_id = m.geom("right_foot_geom").id
+    l_geom_id = m.geom("left_foot_geom").id
 
     leg_qpos_adr = [m.jnt(name).qposadr[0] for name in [
         "right_hip_yaw", "right_hip_roll", "right_hip_pitch", "right_knee", "right_ankle_pitch", "right_ankle_roll",
@@ -157,6 +161,7 @@ def run_random_pushes(speed_mps: float, num_pushes: int, checkpoint_path: str, r
         has_settled = False
 
         for step in range(total_steps):
+            cur_time = step * dt_ctrl
             act = policy_forward(obs_buf)
             act_filt = ema_filter.update(act)
             prev_act = act_filt.copy()
@@ -166,7 +171,31 @@ def run_random_pushes(speed_mps: float, num_pushes: int, checkpoint_path: str, r
                 m.actuator_ctrlrange[:, 0],
                 m.actuator_ctrlrange[:, 1]
             )
-            d.ctrl[:] = target_ctrl
+
+            # Evaluate Dynamic Stepping Engine (Capture Point & Leg IK)
+            mujoco.mj_subtreeVel(m, d)
+            com_pos = d.subtree_com[pelvis_id].copy()
+            com_vel = d.subtree_linvel[pelvis_id].copy()
+            r_ankle_pos = d.xpos[r_foot_id].copy()
+            l_ankle_pos = d.xpos[l_foot_id].copy()
+            r_contact = any(d.contact[i].geom1 == r_geom_id or d.contact[i].geom2 == r_geom_id for i in range(d.ncon))
+            l_contact = any(d.contact[i].geom1 == l_geom_id or d.contact[i].geom2 == l_geom_id for i in range(d.ncon))
+
+            step_info = stepping_ctrl.update(cur_time, com_pos, com_vel, r_ankle_pos, l_ankle_pos, r_contact, l_contact)
+
+            # If dynamic step is triggered, execute swing leg clearance and landing IK
+            if step_info["state"] in [SteppingState.SWING_EXECUTION, SteppingState.TOUCHDOWN_ABSORPTION]:
+                foot_target = step_info["desired_foot_pos"]
+                s_leg = step_info["swing_leg"]
+                if foot_target is not None and s_leg is not None:
+                    hip_pos = d.xpos[r_hip_id] if s_leg == "right" else d.xpos[l_hip_id]
+                    q_swing = stepping_ctrl.inverse_kinematics_leg(hip_pos, foot_target)
+                    if s_leg == "right":
+                        target_ctrl[:6] = q_swing
+                    else:
+                        target_ctrl[6:] = q_swing
+
+            d.ctrl[:] = np.clip(target_ctrl, m.actuator_ctrlrange[:, 0], m.actuator_ctrlrange[:, 1])
 
             substeps = int(round(dt_ctrl / dt_physics))
             for sub in range(substeps):
@@ -210,7 +239,14 @@ def run_random_pushes(speed_mps: float, num_pushes: int, checkpoint_path: str, r
                 img = Image.fromarray(renderer.render())
                 frames.append(img)
 
-            is_fall, reason = is_robot_fallen(m, d)
+            # Stepping-aware dynamic threshold: allow dynamic lunge angle during active swing
+            active_stepping = (step_info["state"] in [SteppingState.SWING_EXECUTION, SteppingState.TOUCHDOWN_ABSORPTION])
+            dyn_thresh = {
+                "min_pelvis_z": 0.50 if active_stepping else 0.55,
+                "max_roll_deg": 40.0 if active_stepping else 30.0,
+                "max_pitch_deg": 40.0 if active_stepping else 30.0
+            }
+            is_fall, reason = is_robot_fallen(m, d, thresholds=dyn_thresh)
             if is_fall:
                 survived = False
                 fell_reason = reason
@@ -251,9 +287,9 @@ def main():
     args = parser.parse_args()
 
     ckpt_060 = os.path.join(PROJECT_ROOT, "checkpoints", "cyrus_balance_0.60ms_mastered.npz")
-    ckpt_070 = os.path.join(PROJECT_ROOT, "checkpoints", "candidate_balance_active.npz")
+    ckpt_070 = os.path.join(PROJECT_ROOT, "checkpoints", "balance_12dof_production.npz")
     if not os.path.exists(ckpt_070):
-        ckpt_070 = ckpt_060
+        ckpt_070 = os.path.join(PROJECT_ROOT, "checkpoints", "candidate_balance_active.npz")
 
     artifact_dir = r"C:\Users\prajval\.gemini\antigravity\brain\f9a5287d-ef88-4f54-ae4f-c5bfe1dc9aac"
     gif_060 = os.path.join(artifact_dir, "simulation_0.60ms_push.gif")
