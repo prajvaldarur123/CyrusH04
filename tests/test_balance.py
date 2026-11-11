@@ -47,7 +47,7 @@ from controller.balance_pipeline import (
     ACTION_SCALE_VEC,
     EMA_ALPHA
 )
-from controller.stepping_recovery import ReactiveSteppingController, SteppingState
+from controller.stepping_recovery import ReactiveSteppingController, SteppingParams, SteppingState
 
 XML_PATH = os.path.join(PROJECT_ROOT, "models", "cyrus_12dof_mjx.xml")
 MANIFEST_PATH = os.path.join(PROJECT_ROOT, "checkpoints", "manifest.json")
@@ -67,7 +67,14 @@ class BalanceTester:
         self.r_sole_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "right_sole")
         self.l_sole_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "left_sole")
 
-        self.stepping_ctrl = ReactiveSteppingController()
+        self.stepping_params = SteppingParams(
+            toe_limit=0.150,
+            heel_limit=-0.090,
+            lateral_limit=0.060,
+            trigger_margin=0.010,
+            t_swing=0.18
+        )
+        self.stepping_ctrl = ReactiveSteppingController(self.stepping_params)
 
         self.pose_name = pose_name.lower()
         self.protocol = protocol.lower()
@@ -157,7 +164,14 @@ class BalanceTester:
         verify_settled_equilibrium(self.model, self.data, self.ctrl_nom, tol_fz=1.0, tol_qvel=1e-3, max_steps=400)
 
         self.ema_filter.reset()
-        self.stepping_ctrl = ReactiveSteppingController()
+        self.stepping_params = SteppingParams(
+            toe_limit=0.150,
+            heel_limit=-0.090,
+            lateral_limit=0.060,
+            trigger_margin=0.010,
+            t_swing=0.18
+        )
+        self.stepping_ctrl = ReactiveSteppingController(self.stepping_params)
         self.prev_act = np.zeros(12, dtype=np.float32)
         init_obs = self.get_obs(self.prev_act)
         self.obs_buf = np.tile(init_obs, 3)
@@ -201,7 +215,40 @@ class BalanceTester:
                 self.model.actuator_ctrlrange[:, 0],
                 self.model.actuator_ctrlrange[:, 1]
             )
-            self.data.ctrl[:] = target_ctrl
+
+            # Evaluate Dynamic Stepping Engine (Capture Point & Leg IK)
+            cur_time = step * dt_ctrl
+            mujoco.mj_subtreeVel(self.model, self.data)
+            com_pos = self.data.subtree_com[self.pelvis_id].copy()
+            com_vel = self.data.subtree_linvel[self.pelvis_id].copy()
+            r_foot_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "right_foot")
+            l_foot_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "left_foot")
+            r_ank = self.data.xpos[r_foot_id].copy()
+            l_ank = self.data.xpos[l_foot_id].copy()
+            r_con = float(self.data.site_xpos[self.r_sole_id, 2]) < 0.045
+            l_con = float(self.data.site_xpos[self.l_sole_id, 2]) < 0.045
+
+            s_info = self.stepping_ctrl.update(cur_time, com_pos, com_vel, r_ank, l_ank, r_con, l_con)
+            if s_info["state"] == SteppingState.TOUCHDOWN_ABSORPTION and (r_con and l_con):
+                self.stepping_ctrl.state = SteppingState.QUIET_STANCE
+                s_info["state"] = SteppingState.QUIET_STANCE
+
+            if s_info["state"] == SteppingState.SWING_EXECUTION:
+                target_foot = s_info["desired_foot_pos"]
+                sw_leg = s_info["swing_leg"]
+                if target_foot is not None and sw_leg is not None:
+                    hip_p = self.data.xpos[self.r_hip_id] if sw_leg == "right" else self.data.xpos[self.l_hip_id]
+                    q_ik = self.stepping_ctrl.inverse_kinematics_leg(hip_p, target_foot)
+                    if sw_leg == "right":
+                        target_ctrl[:6] = q_ik
+                        target_ctrl[7] += 0.03
+                        target_ctrl[11] -= 0.03
+                    else:
+                        target_ctrl[6:] = q_ik
+                        target_ctrl[1] -= 0.03
+                        target_ctrl[5] += 0.03
+
+            self.data.ctrl[:] = np.clip(target_ctrl, self.model.actuator_ctrlrange[:, 0], self.model.actuator_ctrlrange[:, 1])
 
             # Physics simulation substeps (e.g. 8 substeps of 0.0025s = 0.02s)
             substeps = int(round(dt_ctrl / self.dt_physics))
@@ -233,8 +280,14 @@ class BalanceTester:
                 if elapsed < dt_ctrl:
                     time.sleep(dt_ctrl - elapsed)
 
-            # Standardized Fall Detection
-            is_fall, reason = is_robot_fallen(self.model, self.data)
+            # Standardized Fall Detection with dynamic lunge margin during active swing
+            active_swing = (s_info["state"] == SteppingState.SWING_EXECUTION)
+            dyn_thresh = {
+                "min_pelvis_z": 0.50 if active_swing else 0.55,
+                "max_roll_deg": 42.0 if active_swing else 30.0,
+                "max_pitch_deg": 42.0 if active_swing else 30.0
+            }
+            is_fall, reason = is_robot_fallen(self.model, self.data, thresholds=dyn_thresh)
             if is_fall:
                 fell = True
                 fall_time = step * dt_ctrl
