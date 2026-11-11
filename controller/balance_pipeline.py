@@ -73,9 +73,10 @@ def compute_file_sha256(filepath: str) -> str:
     return h.hexdigest()
 
 
-def load_verified_checkpoint(manifest_path: str, checkpoint_key: str = "active_production"):
+def load_verified_checkpoint(manifest_path: str, checkpoint_key: str = "reference_baseline"):
     """
     Loads checkpoint file verified against checkpoints/manifest.json.
+    Supports top-level keys (e.g. 'reference_baseline') or nested candidate keys ('legacy_production').
     Raises RuntimeError immediately if hash mismatch or file not registered.
     """
     if not os.path.exists(manifest_path):
@@ -84,10 +85,17 @@ def load_verified_checkpoint(manifest_path: str, checkpoint_key: str = "active_p
     with open(manifest_path, "r", encoding="utf-8") as f:
         manifest = json.load(f)
 
-    if checkpoint_key not in manifest:
+    entry = None
+    if checkpoint_key in manifest:
+        entry = manifest[checkpoint_key]
+    elif "candidate_policies" in manifest and checkpoint_key in manifest["candidate_policies"]:
+        entry = manifest["candidate_policies"][checkpoint_key]
+    elif checkpoint_key == "active_production":
+        entry = manifest.get("reference_baseline")
+
+    if not entry:
         raise KeyError(f"SECURITY AUDIT ERROR: Key '{checkpoint_key}' not registered in manifest {manifest_path}")
 
-    entry = manifest[checkpoint_key]
     filename = entry["file"]
     expected_hash = entry["sha256"]
 

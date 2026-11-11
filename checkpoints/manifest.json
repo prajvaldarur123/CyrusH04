@@ -1,15 +1,25 @@
 {
-  "version": "1.0.0",
-  "created_at": "2026-11-11T18:05:00Z",
-  "active_production": {
+  "version": "1.1.0",
+  "updated_at": "2026-11-11T18:35:00Z",
+  "reference_baseline": {
+    "status": "CERTIFIED_PD_BASELINE",
     "file": "balance_12dof_production.npz",
     "sha256": "fc4fda14c82a95dccfd1fc0dcecd2f44e8769c0156cf947bae3aef4902c35b44",
-    "description": "Baseline zero-action quiescent PD baseline"
+    "description": "Certified Passive PD Baseline holding Pose C with robust roll gains (Hip 500 / Ankle 400). Action layer is zero. Outperformed by no trained candidate yet.",
+    "realized_limits": {
+      "sagittal_fwd_dv": 0.4452,
+      "sagittal_bwd_dv": 0.4507,
+      "coronal_lat_dv": 0.5062,
+      "diagonal_dv": 0.5524
+    }
   },
-  "legacy_production": {
-    "file": "balance_12dof_production_old_legacy.npz",
-    "sha256": "ae93070c99f772989fc44a44a97158f64d04787e920181d9ee6bfe60e7453f98",
-    "description": "Legacy trained policy (total norm 19.96, action norm 3.48)"
+  "candidate_policies": {
+    "legacy_production": {
+      "status": "CANDIDATE_LEGACY_EVALUATED",
+      "file": "balance_12dof_production_old_legacy.npz",
+      "sha256": "ae93070c99f772989fc44a44a97158f64d04787e920181d9ee6bfe60e7453f98",
+      "description": "Legacy trained policy (total norm 19.96, action norm 3.48). Evaluated under calibrated pulse: does not outperform reference PD baseline (fell 6/8 at 0.50 m/s); preserved for regression auditing."
+    }
   },
   "registered_checkpoints": {
     "balance_12dof_production.npz": {

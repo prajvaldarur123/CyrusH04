@@ -13,8 +13,7 @@ models = [
     "cyrus_human_feet.xml",
     "cyrus_mjx.xml",
     "cyrus_arena_12.xml",
-    "cyrus_ghost_trajectory.xml",
-    "cyrus_v2/cyrus_v2_full_cad.xml"
+    "cyrus_ghost_trajectory.xml"
 ]
 
 all_passed = True

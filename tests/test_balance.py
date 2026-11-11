@@ -54,8 +54,10 @@ MANIFEST_PATH = os.path.join(PROJECT_ROOT, "checkpoints", "manifest.json")
 
 
 class BalanceTester:
-    def __init__(self, checkpoint_path=None, pose_name="pose_c", protocol="pulse"):
+    def __init__(self, checkpoint_path=None, pose_name="pose_c", protocol="pulse", dt_physics=0.0025):
         self.model = mujoco.MjModel.from_xml_path(XML_PATH)
+        self.dt_physics = float(dt_physics)
+        self.model.opt.timestep = self.dt_physics
         self.data = mujoco.MjData(self.model)
 
         self.pelvis_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "pelvis")
@@ -196,9 +198,10 @@ class BalanceTester:
             )
             self.data.ctrl[:] = target_ctrl
 
-            # Physics simulation (4 substeps of 0.005s = 0.02s)
-            for sub in range(4):
-                current_time = step * dt_ctrl + sub * 0.005
+            # Physics simulation substeps (e.g. 8 substeps of 0.0025s = 0.02s)
+            substeps = int(round(dt_ctrl / self.dt_physics))
+            for sub in range(substeps):
+                current_time = step * dt_ctrl + sub * self.dt_physics
 
                 # Apply disturbance
                 if push_mag > 0.0 and (2.0 <= current_time < 2.0 + pulse_duration_s):
@@ -245,6 +248,7 @@ def main():
     parser.add_argument("--push", type=float, default=0.30, help="Push speed target in m/s (default: 0.30 m/s)")
     parser.add_argument("--pose", type=str, default="pose_c", choices=["pose_a", "pose_c"], help="Nominal posture")
     parser.add_argument("--protocol", type=str, default="pulse", choices=["pulse", "jump"], help="Push injection protocol")
+    parser.add_argument("--dt", type=float, default=0.0025, help="Physics simulation timestep (default: 0.0025s = 2.5ms)")
     parser.add_argument("--checkpoint", type=str, default=None, help="Specific checkpoint file to test")
     args = parser.parse_args()
 
@@ -255,7 +259,8 @@ def main():
     tester = BalanceTester(
         checkpoint_path=args.checkpoint,
         pose_name=args.pose,
-        protocol=args.protocol
+        protocol=args.protocol,
+        dt_physics=args.dt
     )
 
     # --- TEST 1: Quiet Stance (Zero Push) ---
