@@ -1,0 +1,592 @@
+<mujoco model="cyrus">
+  <compiler angle="radian" coordinate="local" />
+  <option timestep="0.005" gravity="0 0 -9.80665" integrator="implicitfast" iterations="6" ls_iterations="4" />
+
+  <default>
+    <joint damping="1.5" armature="0.02" />
+    <geom friction="1.2 0.005 0.0001" />
+  </default>
+
+  <visual>
+    <headlight ambient="0.45 0.45 0.48" diffuse="0.8 0.8 0.85" specular="0.25 0.25 0.25" />
+    <rgba haze="0.15 0.2 0.3 1" />
+    <global azimuth="135" elevation="-20" />
+  </visual>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.2 0.35 0.5" rgb2="0.05 0.08 0.12" width="512" height="512" />
+    <texture name="grid" type="2d" builtin="checker" rgb1="0.12 0.14 0.18" rgb2="0.18 0.22 0.28" width="512" height="512" />
+    <material name="grid" texture="grid" texrepeat="2 2" texuniform="true" reflectance="0.15" />
+
+    
+    <material name="armor_white" rgba="0.95 0.96 0.98 1" reflectance="0.5" shininess="0.9" />
+    <material name="carbon_frame" rgba="0.12 0.13 0.15 1" reflectance="0.2" shininess="0.4" />
+    <material name="joint_metal" rgba="0.45 0.48 0.52 1" reflectance="0.6" shininess="0.95" />
+    <material name="chrome_trim" rgba="0.8 0.82 0.85 1" reflectance="0.8" shininess="1.0" />
+    <material name="servo_copper" rgba="0.82 0.48 0.18 1" reflectance="0.6" shininess="0.85" />
+    <material name="anodized_gold" rgba="0.88 0.72 0.22 1" reflectance="0.7" shininess="0.9" />
+    <material name="visor_cyan" rgba="0.05 0.85 0.95 0.95" emission="0.85" reflectance="0.9" />
+    <material name="core_glow" rgba="0.1 0.6 1.0 1" emission="0.9" reflectance="0.8" />
+    <material name="accent_blue" rgba="0.12 0.4 0.85 1" reflectance="0.3" />
+    <material name="sole_rubber" rgba="0.08 0.08 0.09 1" reflectance="0.05" />
+    <material name="finger_pad" rgba="0.15 0.15 0.17 1" reflectance="0.1" />
+    <material name="target_glow" rgba="1.0 0.3 0.2 0.7" emission="0.6" />
+  </asset>
+
+  <worldbody>
+    <geom name="floor" type="plane" size="10 10 0.1" material="grid" friction="1.1 0.005 0.0001" condim="6" solref="0.005 1" solimp="0.95 0.99 0.001 0.5 2" />
+    <light directional="true" pos="0 0 4" dir="0 0 -1" />
+    <light directional="false" pos="2 2 3" dir="-1 -1 -1" />
+
+    
+    <body name="gaze_target" pos="1.2 0.0 1.5" mocap="true">
+      <geom type="sphere" size="0.04" material="target_glow" contype="0" conaffinity="0" />
+    </body>
+
+    
+    <body name="pelvis" pos="0 0 0.84">
+      <freejoint name="root" />
+      
+      <geom name="pelvis_geom" type="box" size="0.10 0.12 0.07" material="carbon_frame" density="900" />
+      
+      <geom type="box" size="0.03 0.10 0.06" pos="0.09 0 0.01" material="armor_white" contype="0" conaffinity="0" />
+      
+      <geom type="sphere" size="0.06" pos="0 -0.11 -0.04" material="joint_metal" contype="0" conaffinity="0" />
+      <geom type="sphere" size="0.06" pos="0 0.11 -0.04" material="joint_metal" contype="0" conaffinity="0" />
+      
+      <geom type="box" size="0.025 0.09 0.05" pos="-0.09 0 0.01" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+      <geom type="cylinder" size="0.052 0.022" pos="0 -0.11 -0.025" zaxis="0 0 1" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+      <geom type="cylinder" size="0.052 0.022" pos="0 0.11 -0.025" zaxis="0 0 1" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+      <geom type="cylinder" size="0.042 0.024" pos="0 -0.11 -0.025" zaxis="0 0 1" material="anodized_gold" contype="0" conaffinity="0" mass="0" />
+      <geom type="cylinder" size="0.042 0.024" pos="0 0.11 -0.025" zaxis="0 0 1" material="anodized_gold" contype="0" conaffinity="0" mass="0" />
+
+      
+      <body name="torso_lower" pos="0 0 0.10">
+        <geom type="cylinder" size="0.06 0.05" material="carbon_frame" density="800" contype="0" conaffinity="0" />
+        
+        <geom type="cylinder" size="0.065 0.01" pos="0 0 -0.03" material="joint_metal" contype="0" conaffinity="0" />
+        <geom type="cylinder" size="0.065 0.01" pos="0 0 0.0" material="chrome_trim" contype="0" conaffinity="0" />
+        <geom type="cylinder" size="0.065 0.01" pos="0 0 0.03" material="joint_metal" contype="0" conaffinity="0" />
+        
+        <geom type="cylinder" size="0.055 0.018" pos="0 0 0.0" zaxis="1 0 0" material="anodized_gold" contype="0" conaffinity="0" mass="0" />
+        <geom type="capsule" fromto="-0.04 -0.075 -0.04 -0.04 -0.075 0.05" size="0.008" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+        <geom type="capsule" fromto="-0.04 0.075 -0.04 -0.04 0.075 0.05" size="0.008" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+        
+        <geom type="box" size="0.07 0.02 0.04" pos="0 -0.09 0" material="armor_white" contype="0" conaffinity="0" />
+        <geom type="box" size="0.07 0.02 0.04" pos="0 0.09 0" material="armor_white" contype="0" conaffinity="0" />
+
+        <body name="torso_upper" pos="0 0 0.14">
+          <geom type="box" size="0.10 0.14 0.13" material="carbon_frame" density="950" />
+          
+          <geom type="cylinder" size="0.048 0.065" pos="0 0 -0.11" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+          <geom type="cylinder" size="0.036 0.068" pos="0 0 -0.11" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0" />
+          <geom type="box" size="0.035 0.11 0.10" pos="-0.11 0 0.02" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+          <geom type="box" size="0.012 0.08 0.07" pos="-0.142 0 0.02" material="armor_white" contype="0" conaffinity="0" mass="0" />
+          
+          
+          <geom type="box" size="0.03 0.07 0.06" pos="0.10 -0.07 0.06" material="armor_white" contype="0" conaffinity="0" />
+          <geom type="box" size="0.03 0.07 0.06" pos="0.10 0.07 0.06" material="armor_white" contype="0" conaffinity="0" />
+          
+          <geom type="box" size="0.025 0.01 0.10" pos="0.105 0 0.03" material="carbon_frame" contype="0" conaffinity="0" />
+
+          
+          <geom type="cylinder" size="0.04 0.015" pos="0.12 0 0.03" zaxis="1 0 0" material="core_glow" contype="0" conaffinity="0" />
+          <geom type="cylinder" size="0.045 0.005" pos="0.122 0 0.03" zaxis="1 0 0" material="chrome_trim" contype="0" conaffinity="0" />
+
+          
+          <geom type="capsule" fromto="0.08 -0.03 0.12 0.04 -0.16 0.12" size="0.015" material="chrome_trim" contype="0" conaffinity="0" />
+          <geom type="capsule" fromto="0.08 0.03 0.12 0.04 0.16 0.12" size="0.015" material="chrome_trim" contype="0" conaffinity="0" />
+
+          
+          <geom type="box" size="0.08 0.02 0.015" pos="0.02 -0.13 -0.04" material="armor_white" contype="0" conaffinity="0" />
+          <geom type="box" size="0.08 0.02 0.015" pos="0.02 0.13 -0.04" material="armor_white" contype="0" conaffinity="0" />
+          <site name="torso_com" pos="0 0 0.05" size="0.01" />
+
+          
+          <body name="neck" pos="0 0 0.18">
+            <geom type="cylinder" size="0.035 0.04" material="carbon_frame" density="600" contype="0" conaffinity="0" />
+            <geom type="cylinder" size="0.012 0.038" pos="0.02 -0.03 0" material="chrome_trim" contype="0" conaffinity="0" />
+            <geom type="cylinder" size="0.012 0.038" pos="0.02 0.03 0" material="chrome_trim" contype="0" conaffinity="0" />
+
+            <body name="head" pos="0 0 0.08">
+              
+              <geom type="ellipsoid" size="0.09 0.08 0.09" material="armor_white" density="700" contype="0" conaffinity="0" />
+              
+              <geom type="box" size="0.05 0.045 0.03" pos="0.06 0 -0.04" material="carbon_frame" contype="0" conaffinity="0" />
+              <geom type="box" size="0.02 0.025 0.02" pos="0.09 0 -0.045" material="chrome_trim" contype="0" conaffinity="0" />
+              
+              
+              <geom type="box" size="0.035 0.07 0.028" pos="0.078 0 0.01" material="visor_cyan" contype="0" conaffinity="0" />
+              <geom type="cylinder" size="0.03 0.005" pos="0.09 0 0.01" zaxis="1 0 0" material="chrome_trim" contype="0" conaffinity="0" />
+
+              
+              <geom type="cylinder" size="0.025 0.01" pos="0 -0.085 0.01" zaxis="0 1 0" material="carbon_frame" contype="0" conaffinity="0" />
+              <geom type="cylinder" size="0.025 0.01" pos="0 0.085 0.01" zaxis="0 1 0" material="carbon_frame" contype="0" conaffinity="0" />
+              <geom type="sphere" size="0.012" pos="0 -0.095 0.01" material="visor_cyan" contype="0" conaffinity="0" />
+              <geom type="sphere" size="0.012" pos="0 0.095 0.01" material="visor_cyan" contype="0" conaffinity="0" />
+
+              <site name="eyes" pos="0.10 0 0.01" size="0.01" />
+              <site name="head_top" pos="0 0 0.09" size="0.01" />
+            </body>
+          </body>
+
+          
+          <body name="right_shoulder" pos="0 -0.19 0.10">
+            <geom type="sphere" size="0.048" material="joint_metal" density="800" />
+            
+            <geom type="cylinder" size="0.044 0.022" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+            <geom type="cylinder" size="0.036 0.024" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0" />
+            <geom type="cylinder" size="0.040 0.020" pos="0 -0.025 -0.03" zaxis="1 0 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+            
+            <geom type="ellipsoid" size="0.06 0.05 0.035" pos="0 -0.02 0.02" material="armor_white" contype="0" conaffinity="0" />
+
+            <body name="right_upper_arm" pos="0 -0.04 -0.12">
+              <geom type="capsule" fromto="0 0 0.07 0 0 -0.11" size="0.035" material="carbon_frame" density="850" />
+              
+              <geom type="cylinder" size="0.039 0.012" pos="0 0 0.05" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+              <geom type="cylinder" size="0.039 0.012" pos="0 0 -0.10" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+              
+              <geom type="capsule" fromto="0.015 0 0.05 0.015 0 -0.07" size="0.025" material="armor_white" contype="0" conaffinity="0" />
+              
+              <geom type="capsule" fromto="-0.015 0 0.05 -0.015 0 -0.07" size="0.025" material="carbon_frame" contype="0" conaffinity="0" />
+
+              <body name="right_forearm" pos="0 0 -0.15">
+                <geom type="cylinder" size="0.03 0.025" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" />
+                <geom type="cylinder" size="0.026 0.030" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0" />
+                
+                <geom type="box" size="0.02 0.025 0.02" pos="-0.025 0 0" material="armor_white" contype="0" conaffinity="0" />
+
+                
+                <geom type="capsule" fromto="0 0 0 0 0 -0.16" size="0.028" material="carbon_frame" density="800" />
+                
+                <geom type="box" size="0.02 0.03 0.07" pos="0.015 0 -0.08" material="armor_white" contype="0" conaffinity="0" />
+                <geom type="box" size="0.01 0.025 0.06" pos="-0.018 0 -0.08" material="joint_metal" contype="0" conaffinity="0" />
+
+                
+                <geom type="cylinder" size="0.026 0.012" pos="0 0 -0.17" material="chrome_trim" contype="0" conaffinity="0" />
+
+                                
+                <body name="right_hand" pos="0 0 -0.21">
+                  
+                  <geom name="right_palm_core" type="box" size="0.015 0.032 0.035" material="carbon_frame" density="700" friction="1.5 0.005 0.0001" />
+                  
+                  <geom type="box" size="0.008 0.03 0.03" pos="0.016 0 0" material="armor_white" contype="0" conaffinity="0" />
+                  <site name="right_palm" pos="0 0 -0.03" size="0.01" />
+
+                  
+                  <body name="right_thumb_proximal" pos="0 0.025 0.01">
+                    <geom type="capsule" fromto="0 0 0 0.012 0.015 -0.018" size="0.0065" material="joint_metal" density="400" />
+                    <geom type="cylinder" size="0.007 0.004" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0" />
+                    
+                    <body name="right_thumb_distal" pos="0.012 0.015 -0.018">
+                      <geom type="capsule" fromto="0 0 0 0.010 0.012 -0.016" size="0.0055" material="joint_metal" density="400" />
+                      <geom name="right_thumb_pad" type="capsule" fromto="0 0 -0.004 0.010 0.012 -0.016" size="0.0055" material="finger_pad" friction="1.8 0.005 0.0001" />
+                      <site name="right_thumb_tip" pos="0.010 0.012 -0.016" size="0.004" />
+                    </body>
+                  </body>
+
+                  
+                  <body name="right_index_proximal" pos="0.008 0.022 -0.035">
+                    <geom type="capsule" fromto="0 0 0 0 0 -0.018" size="0.0055" material="joint_metal" density="400" />
+                    <geom type="cylinder" size="0.006 0.004" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0" />
+
+                    <body name="right_index_intermediate" pos="0 0 -0.018">
+                      <geom type="capsule" fromto="0 0 0 0 0 -0.014" size="0.0048" material="joint_metal" density="400" />
+                      <geom type="cylinder" size="0.0052 0.0035" zaxis="0 1 0" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+
+                      <body name="right_index_distal" pos="0 0 -0.014">
+                        <geom type="capsule" fromto="0 0 0 0 0 -0.013" size="0.0042" material="joint_metal" density="400" />
+                        <geom name="right_index_pad" type="capsule" fromto="0 0 -0.004 -0.002 0 -0.013" size="0.0045" material="finger_pad" friction="1.8 0.005 0.0001" />
+                        <site name="right_index_tip" pos="-0.002 0 -0.013" size="0.0035" />
+                      </body>
+                    </body>
+                  </body>
+
+                  
+                  <body name="right_middle_proximal" pos="0.008 0.007 -0.035">
+                    <geom type="capsule" fromto="0 0 0 0 0 -0.020" size="0.0055" material="joint_metal" density="400" />
+                    <geom type="cylinder" size="0.006 0.004" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0" />
+
+                    <body name="right_middle_intermediate" pos="0 0 -0.020">
+                      <geom type="capsule" fromto="0 0 0 0 0 -0.016" size="0.0048" material="joint_metal" density="400" />
+                      <geom type="cylinder" size="0.0052 0.0035" zaxis="0 1 0" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+
+                      <body name="right_middle_distal" pos="0 0 -0.016">
+                        <geom type="capsule" fromto="0 0 0 0 0 -0.015" size="0.0042" material="joint_metal" density="400" />
+                        <geom name="right_middle_pad" type="capsule" fromto="0 0 -0.004 -0.002 0 -0.015" size="0.0045" material="finger_pad" friction="1.8 0.005 0.0001" />
+                        <site name="right_middle_tip" pos="-0.002 0 -0.015" size="0.0035" />
+                      </body>
+                    </body>
+                  </body>
+
+                  
+                  <body name="right_ring_proximal" pos="0.008 -0.008 -0.035">
+                    <geom type="capsule" fromto="0 0 0 0 0 -0.018" size="0.0055" material="joint_metal" density="400" />
+                    <geom type="cylinder" size="0.006 0.004" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0" />
+
+                    <body name="right_ring_intermediate" pos="0 0 -0.018">
+                      <geom type="capsule" fromto="0 0 0 0 0 -0.014" size="0.0048" material="joint_metal" density="400" />
+                      <geom type="cylinder" size="0.0052 0.0035" zaxis="0 1 0" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+
+                      <body name="right_ring_distal" pos="0 0 -0.014">
+                        <geom type="capsule" fromto="0 0 0 0 0 -0.013" size="0.0042" material="joint_metal" density="400" />
+                        <geom name="right_ring_pad" type="capsule" fromto="0 0 -0.004 -0.002 0 -0.013" size="0.0045" material="finger_pad" friction="1.8 0.005 0.0001" />
+                        <site name="right_ring_tip" pos="-0.002 0 -0.013" size="0.0035" />
+                      </body>
+                    </body>
+                  </body>
+
+                  
+                  <body name="right_pinky_proximal" pos="0.008 -0.022 -0.035">
+                    <geom type="capsule" fromto="0 0 0 0 0 -0.014" size="0.0055" material="joint_metal" density="400" />
+                    <geom type="cylinder" size="0.006 0.004" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0" />
+
+                    <body name="right_pinky_intermediate" pos="0 0 -0.014">
+                      <geom type="capsule" fromto="0 0 0 0 0 -0.011" size="0.0048" material="joint_metal" density="400" />
+                      <geom type="cylinder" size="0.0052 0.0035" zaxis="0 1 0" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+
+                      <body name="right_pinky_distal" pos="0 0 -0.011">
+                        <geom type="capsule" fromto="0 0 0 0 0 -0.010" size="0.0042" material="joint_metal" density="400" />
+                        <geom name="right_pinky_pad" type="capsule" fromto="0 0 -0.004 -0.002 0 -0.010" size="0.0045" material="finger_pad" friction="1.8 0.005 0.0001" />
+                        <site name="right_pinky_tip" pos="-0.002 0 -0.010" size="0.0035" />
+                      </body>
+                    </body>
+                  </body>
+                  <site name="right_fingertips" pos="0 0 -0.050" size="0.005" />
+                </body>
+              </body>
+            </body>
+          </body>
+
+          
+          <body name="left_shoulder" pos="0 0.19 0.10">
+            <geom type="sphere" size="0.048" material="joint_metal" density="800" />
+            
+            <geom type="cylinder" size="0.044 0.022" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+            <geom type="cylinder" size="0.036 0.024" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0" />
+            <geom type="cylinder" size="0.040 0.020" pos="0 0.025 -0.03" zaxis="1 0 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+            
+            <geom type="ellipsoid" size="0.06 0.05 0.035" pos="0 0.02 0.02" material="armor_white" contype="0" conaffinity="0" />
+
+            <body name="left_upper_arm" pos="0 0.04 -0.12">
+              <geom type="capsule" fromto="0 0 0.07 0 0 -0.11" size="0.035" material="carbon_frame" density="850" />
+              
+              <geom type="cylinder" size="0.039 0.012" pos="0 0 0.05" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+              <geom type="cylinder" size="0.039 0.012" pos="0 0 -0.10" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+              
+              <geom type="capsule" fromto="0.015 0 0.05 0.015 0 -0.07" size="0.025" material="armor_white" contype="0" conaffinity="0" />
+              
+              <geom type="capsule" fromto="-0.015 0 0.05 -0.015 0 -0.07" size="0.025" material="carbon_frame" contype="0" conaffinity="0" />
+
+              <body name="left_forearm" pos="0 0 -0.15">
+                <geom type="cylinder" size="0.03 0.025" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" />
+                <geom type="cylinder" size="0.026 0.030" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0" />
+                
+                <geom type="box" size="0.02 0.025 0.02" pos="-0.025 0 0" material="armor_white" contype="0" conaffinity="0" />
+
+                
+                <geom type="capsule" fromto="0 0 0 0 0 -0.16" size="0.028" material="carbon_frame" density="800" />
+                
+                <geom type="box" size="0.02 0.03 0.07" pos="0.015 0 -0.08" material="armor_white" contype="0" conaffinity="0" />
+                <geom type="box" size="0.01 0.025 0.06" pos="-0.018 0 -0.08" material="joint_metal" contype="0" conaffinity="0" />
+
+                
+                <geom type="cylinder" size="0.026 0.012" pos="0 0 -0.17" material="chrome_trim" contype="0" conaffinity="0" />
+
+                                
+                <body name="left_hand" pos="0 0 -0.21">
+                  
+                  <geom name="left_palm_core" type="box" size="0.015 0.032 0.035" material="carbon_frame" density="700" friction="1.5 0.005 0.0001" />
+                  
+                  <geom type="box" size="0.008 0.03 0.03" pos="0.016 0 0" material="armor_white" contype="0" conaffinity="0" />
+                  <site name="left_palm" pos="0 0 -0.03" size="0.01" />
+
+                  
+                  <body name="left_thumb_proximal" pos="0 -0.025 0.01">
+                    <geom type="capsule" fromto="0 0 0 0.012 -0.015 -0.018" size="0.0065" material="joint_metal" density="400" />
+                    <geom type="cylinder" size="0.007 0.004" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0" />
+                    
+                    <body name="left_thumb_distal" pos="0.012 -0.015 -0.018">
+                      <geom type="capsule" fromto="0 0 0 0.010 -0.012 -0.016" size="0.0055" material="joint_metal" density="400" />
+                      <geom name="left_thumb_pad" type="capsule" fromto="0 0 -0.004 0.010 -0.012 -0.016" size="0.0055" material="finger_pad" friction="1.8 0.005 0.0001" />
+                      <site name="left_thumb_tip" pos="0.010 -0.012 -0.016" size="0.004" />
+                    </body>
+                  </body>
+
+                  
+                  <body name="left_index_proximal" pos="0.008 -0.022 -0.035">
+                    <geom type="capsule" fromto="0 0 0 0 0 -0.018" size="0.0055" material="joint_metal" density="400" />
+                    <geom type="cylinder" size="0.006 0.004" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0" />
+
+                    <body name="left_index_intermediate" pos="0 0 -0.018">
+                      <geom type="capsule" fromto="0 0 0 0 0 -0.014" size="0.0048" material="joint_metal" density="400" />
+                      <geom type="cylinder" size="0.0052 0.0035" zaxis="0 1 0" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+
+                      <body name="left_index_distal" pos="0 0 -0.014">
+                        <geom type="capsule" fromto="0 0 0 0 0 -0.013" size="0.0042" material="joint_metal" density="400" />
+                        <geom name="left_index_pad" type="capsule" fromto="0 0 -0.004 -0.002 0 -0.013" size="0.0045" material="finger_pad" friction="1.8 0.005 0.0001" />
+                        <site name="left_index_tip" pos="-0.002 0 -0.013" size="0.0035" />
+                      </body>
+                    </body>
+                  </body>
+
+                  
+                  <body name="left_middle_proximal" pos="0.008 -0.007 -0.035">
+                    <geom type="capsule" fromto="0 0 0 0 0 -0.020" size="0.0055" material="joint_metal" density="400" />
+                    <geom type="cylinder" size="0.006 0.004" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0" />
+
+                    <body name="left_middle_intermediate" pos="0 0 -0.020">
+                      <geom type="capsule" fromto="0 0 0 0 0 -0.016" size="0.0048" material="joint_metal" density="400" />
+                      <geom type="cylinder" size="0.0052 0.0035" zaxis="0 1 0" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+
+                      <body name="left_middle_distal" pos="0 0 -0.016">
+                        <geom type="capsule" fromto="0 0 0 0 0 -0.015" size="0.0042" material="joint_metal" density="400" />
+                        <geom name="left_middle_pad" type="capsule" fromto="0 0 -0.004 -0.002 0 -0.015" size="0.0045" material="finger_pad" friction="1.8 0.005 0.0001" />
+                        <site name="left_middle_tip" pos="-0.002 0 -0.015" size="0.0035" />
+                      </body>
+                    </body>
+                  </body>
+
+                  
+                  <body name="left_ring_proximal" pos="0.008 0.008 -0.035">
+                    <geom type="capsule" fromto="0 0 0 0 0 -0.018" size="0.0055" material="joint_metal" density="400" />
+                    <geom type="cylinder" size="0.006 0.004" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0" />
+
+                    <body name="left_ring_intermediate" pos="0 0 -0.018">
+                      <geom type="capsule" fromto="0 0 0 0 0 -0.014" size="0.0048" material="joint_metal" density="400" />
+                      <geom type="cylinder" size="0.0052 0.0035" zaxis="0 1 0" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+
+                      <body name="left_ring_distal" pos="0 0 -0.014">
+                        <geom type="capsule" fromto="0 0 0 0 0 -0.013" size="0.0042" material="joint_metal" density="400" />
+                        <geom name="left_ring_pad" type="capsule" fromto="0 0 -0.004 -0.002 0 -0.013" size="0.0045" material="finger_pad" friction="1.8 0.005 0.0001" />
+                        <site name="left_ring_tip" pos="-0.002 0 -0.013" size="0.0035" />
+                      </body>
+                    </body>
+                  </body>
+
+                  
+                  <body name="left_pinky_proximal" pos="0.008 0.022 -0.035">
+                    <geom type="capsule" fromto="0 0 0 0 0 -0.014" size="0.0055" material="joint_metal" density="400" />
+                    <geom type="cylinder" size="0.006 0.004" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0" />
+
+                    <body name="left_pinky_intermediate" pos="0 0 -0.014">
+                      <geom type="capsule" fromto="0 0 0 0 0 -0.011" size="0.0048" material="joint_metal" density="400" />
+                      <geom type="cylinder" size="0.0052 0.0035" zaxis="0 1 0" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+
+                      <body name="left_pinky_distal" pos="0 0 -0.011">
+                        <geom type="capsule" fromto="0 0 0 0 0 -0.010" size="0.0042" material="joint_metal" density="400" />
+                        <geom name="left_pinky_pad" type="capsule" fromto="0 0 -0.004 -0.002 0 -0.010" size="0.0045" material="finger_pad" friction="1.8 0.005 0.0001" />
+                        <site name="left_pinky_tip" pos="-0.002 0 -0.010" size="0.0035" />
+                      </body>
+                    </body>
+                  </body>
+                  <site name="left_fingertips" pos="0 0 -0.050" size="0.005" />
+                </body>
+              </body>
+            </body>
+          </body>
+
+        </body>
+      </body>
+
+      
+      <body name="right_hip" pos="0 -0.11 -0.06">
+        <joint name="right_hip_yaw" type="hinge" axis="0 0 1" range="-0.6 0.6" damping="3.5" />
+        <joint name="right_hip_roll" type="hinge" axis="1 0 0" range="-0.6 0.6" damping="3.5" />
+        <joint name="right_hip_pitch" type="hinge" axis="0 1 0" range="-1.4 0.8" damping="4.0" />
+        
+        
+        <geom type="sphere" size="0.052" material="joint_metal" density="900" />
+        
+        <geom type="cylinder" size="0.052 0.024" zaxis="1 0 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+        <geom type="cylinder" size="0.056 0.028" pos="0 -0.025 0" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+        <geom type="cylinder" size="0.044 0.030" pos="0 -0.025 0" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0" />
+
+        <body name="right_thigh" pos="0 0 -0.20">
+          
+          <geom type="capsule" fromto="0 0 0.16 0 0 -0.16" size="0.045" material="carbon_frame" density="1000" />
+          
+          <geom type="box" size="0.022 0.008 0.16" pos="0 -0.048 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+          <geom type="box" size="0.022 0.008 0.16" pos="0 0.048 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+          
+          <geom type="capsule" fromto="0.025 0 0.12 0.025 0 -0.12" size="0.035" material="armor_white" contype="0" conaffinity="0" />
+          
+          <geom type="box" size="0.03 0.012 0.13" pos="0 -0.045 0" material="armor_white" contype="0" conaffinity="0" />
+          
+          <geom type="capsule" fromto="-0.02 0 0.10 -0.02 0 -0.10" size="0.03" material="carbon_frame" contype="0" conaffinity="0" />
+
+          <body name="right_shin" pos="0 0 -0.20">
+            <joint name="right_knee" type="hinge" axis="0 1 0" range="0.0 2.2" damping="3.5" />
+            
+            
+            <geom type="cylinder" size="0.04 0.035" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" />
+            <geom type="cylinder" size="0.036 0.040" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0" />
+            
+            <geom type="box" size="0.025 0.038 0.03" pos="0.045 0 0" material="armor_white" friction="2.0 0.01 0.001" />
+
+            
+            <geom type="capsule" fromto="0 0 0 0 0 -0.32" size="0.040" material="carbon_frame" density="950" />
+            
+            <geom type="capsule" fromto="-0.032 -0.032 -0.05 -0.028 -0.028 -0.33" size="0.006" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+            <geom type="capsule" fromto="-0.032 0.032 -0.05 -0.028 0.028 -0.33" size="0.006" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+            
+            <geom type="box" size="0.02 0.035 0.12" pos="0.035 0 -0.15" material="armor_white" contype="0" conaffinity="0" />
+            
+            <geom type="capsule" fromto="-0.025 0 -0.06 -0.025 0 -0.22" size="0.032" material="carbon_frame" contype="0" conaffinity="0" />
+
+            
+            <geom type="cylinder" size="0.03 0.025" pos="0 0 -0.34" zaxis="0 1 0" material="chrome_trim" contype="0" conaffinity="0" />
+
+            
+            <body name="right_foot" pos="0 0 -0.36">
+              <joint name="right_ankle_pitch" type="hinge" axis="0 1 0" range="-0.8 0.8" damping="2.5" />
+              <joint name="right_ankle_roll" type="hinge" axis="1 0 0" range="-0.4 0.4" damping="2.5" />
+              
+              
+              <geom name="right_foot_geom" type="box" pos="0.01 0 0" size="0.15 0.06 0.02" material="sole_rubber" friction="1.4 0.01 0.005" condim="6" solref="0.005 1" solimp="0.95 0.99 0.001 0.5 2" density="900" />
+              
+              <geom type="box" size="0.145 0.056 0.006" pos="0.01 0 0.012" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+              
+              
+              <geom type="box" size="0.08 0.05 0.02" pos="0.02 0 0.02" material="armor_white" contype="0" conaffinity="0" />
+              
+              <geom type="ellipsoid" size="0.05 0.045 0.025" pos="-0.08 0 0.02" material="carbon_frame" contype="0" conaffinity="0" />
+              
+              <geom type="box" size="0.035 0.05 0.012" pos="0.12 0 0.01" material="armor_white" contype="0" conaffinity="0" />
+
+              <site name="right_sole" pos="0.01 0 -0.02" size="0.01" />
+            </body>
+          </body>
+        </body>
+      </body>
+
+      
+      <body name="left_hip" pos="0 0.11 -0.06">
+        <joint name="left_hip_yaw" type="hinge" axis="0 0 1" range="-0.6 0.6" damping="3.5" />
+        <joint name="left_hip_roll" type="hinge" axis="1 0 0" range="-0.6 0.6" damping="3.5" />
+        <joint name="left_hip_pitch" type="hinge" axis="0 1 0" range="-1.4 0.8" damping="4.0" />
+        
+        
+        <geom type="sphere" size="0.052" material="joint_metal" density="900" />
+        
+        <geom type="cylinder" size="0.052 0.024" zaxis="1 0 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+        <geom type="cylinder" size="0.056 0.028" pos="0 0.025 0" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+        <geom type="cylinder" size="0.044 0.030" pos="0 0.025 0" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0" />
+
+        <body name="left_thigh" pos="0 0 -0.20">
+          
+          <geom type="capsule" fromto="0 0 0.16 0 0 -0.16" size="0.045" material="carbon_frame" density="1000" />
+          
+          <geom type="box" size="0.022 0.008 0.16" pos="0 -0.048 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+          <geom type="box" size="0.022 0.008 0.16" pos="0 0.048 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+          
+          <geom type="capsule" fromto="0.025 0 0.12 0.025 0 -0.12" size="0.035" material="armor_white" contype="0" conaffinity="0" />
+          
+          <geom type="box" size="0.03 0.012 0.13" pos="0 0.045 0" material="armor_white" contype="0" conaffinity="0" />
+          
+          <geom type="capsule" fromto="-0.02 0 0.10 -0.02 0 -0.10" size="0.03" material="carbon_frame" contype="0" conaffinity="0" />
+
+          <body name="left_shin" pos="0 0 -0.20">
+            <joint name="left_knee" type="hinge" axis="0 1 0" range="0.0 2.2" damping="3.5" />
+            
+            
+            <geom type="cylinder" size="0.04 0.035" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" />
+            <geom type="cylinder" size="0.036 0.040" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0" />
+            
+            <geom type="box" size="0.025 0.038 0.03" pos="0.045 0 0" material="armor_white" friction="2.0 0.01 0.001" />
+
+            
+            <geom type="capsule" fromto="0 0 0 0 0 -0.32" size="0.040" material="carbon_frame" density="950" />
+            
+            <geom type="capsule" fromto="-0.032 -0.032 -0.05 -0.028 -0.028 -0.33" size="0.006" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+            <geom type="capsule" fromto="-0.032 0.032 -0.05 -0.028 0.028 -0.33" size="0.006" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+            
+            <geom type="box" size="0.02 0.035 0.12" pos="0.035 0 -0.15" material="armor_white" contype="0" conaffinity="0" />
+            
+            <geom type="capsule" fromto="-0.025 0 -0.06 -0.025 0 -0.22" size="0.032" material="carbon_frame" contype="0" conaffinity="0" />
+
+            
+            <geom type="cylinder" size="0.03 0.025" pos="0 0 -0.34" zaxis="0 1 0" material="chrome_trim" contype="0" conaffinity="0" />
+
+            
+            <body name="left_foot" pos="0 0 -0.36">
+              <joint name="left_ankle_pitch" type="hinge" axis="0 1 0" range="-0.8 0.8" damping="2.5" />
+              <joint name="left_ankle_roll" type="hinge" axis="1 0 0" range="-0.4 0.4" damping="2.5" />
+              
+              
+              <geom name="left_foot_geom" type="box" pos="0.01 0 0" size="0.15 0.06 0.02" material="sole_rubber" friction="1.4 0.01 0.005" condim="6" solref="0.005 1" solimp="0.95 0.99 0.001 0.5 2" density="900" />
+              
+              <geom type="box" size="0.145 0.056 0.006" pos="0.01 0 0.012" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+              
+              
+              <geom type="box" size="0.08 0.05 0.02" pos="0.02 0 0.02" material="armor_white" contype="0" conaffinity="0" />
+              
+              <geom type="ellipsoid" size="0.05 0.045 0.025" pos="-0.08 0 0.02" material="carbon_frame" contype="0" conaffinity="0" mass="0" />
+              
+              <geom type="box" size="0.035 0.05 0.012" pos="0.12 0 0.01" material="armor_white" contype="0" conaffinity="0" />
+
+              <site name="left_sole" pos="0.01 0 -0.02" size="0.01" />
+            </body>
+          </body>
+        </body>
+      </body>
+
+    </body>
+  </worldbody>
+
+  
+  <actuator>
+    
+    <position name="right_hip_yaw_act" joint="right_hip_yaw" kp="350" kv="35" ctrlrange="-0.6 0.6" forcerange="-140 140" />
+    <position name="right_hip_roll_act" joint="right_hip_roll" kp="180" kv="18" ctrlrange="-0.6 0.6" forcerange="-180 180" />
+    <position name="right_hip_pitch_act" joint="right_hip_pitch" kp="700" kv="70" ctrlrange="-1.4 0.8" forcerange="-240 240" />
+    <position name="right_knee_act" joint="right_knee" kp="800" kv="80" ctrlrange="0.0 2.2" forcerange="-260 260" />
+    <position name="right_ankle_pitch_act" joint="right_ankle_pitch" kp="600" kv="60" ctrlrange="-0.8 0.8" forcerange="-180 180" />
+    <position name="right_ankle_roll_act" joint="right_ankle_roll" kp="150" kv="15" ctrlrange="-0.4 0.4" forcerange="-130 130" />
+
+    
+    <position name="left_hip_yaw_act" joint="left_hip_yaw" kp="350" kv="35" ctrlrange="-0.6 0.6" forcerange="-140 140" />
+    <position name="left_hip_roll_act" joint="left_hip_roll" kp="180" kv="18" ctrlrange="-0.6 0.6" forcerange="-180 180" />
+    <position name="left_hip_pitch_act" joint="left_hip_pitch" kp="700" kv="70" ctrlrange="-1.4 0.8" forcerange="-240 240" />
+    <position name="left_knee_act" joint="left_knee" kp="800" kv="80" ctrlrange="0.0 2.2" forcerange="-260 260" />
+    <position name="left_ankle_pitch_act" joint="left_ankle_pitch" kp="600" kv="60" ctrlrange="-0.8 0.8" forcerange="-180 180" />
+    <position name="left_ankle_roll_act" joint="left_ankle_roll" kp="150" kv="15" ctrlrange="-0.4 0.4" forcerange="-130 130" />
+
+    
+    </actuator>
+
+  
+  <contact>
+    <exclude body1="pelvis" body2="torso_lower" />
+    <exclude body1="torso_lower" body2="torso_upper" />
+    <exclude body1="torso_upper" body2="neck" />
+    <exclude body1="neck" body2="head" />
+
+    
+    <exclude body1="torso_upper" body2="right_shoulder" />
+    <exclude body1="torso_upper" body2="right_upper_arm" />
+    <exclude body1="right_shoulder" body2="right_upper_arm" />
+    <exclude body1="right_upper_arm" body2="right_forearm" />
+    <exclude body1="right_forearm" body2="right_hand" />
+
+    <exclude body1="torso_upper" body2="left_shoulder" />
+    <exclude body1="torso_upper" body2="left_upper_arm" />
+    <exclude body1="left_shoulder" body2="left_upper_arm" />
+    <exclude body1="left_upper_arm" body2="left_forearm" />
+    <exclude body1="left_forearm" body2="left_hand" />
+
+    
+    <exclude body1="pelvis" body2="right_hip" />
+    <exclude body1="pelvis" body2="right_thigh" />
+    <exclude body1="right_hip" body2="right_thigh" />
+    <exclude body1="right_thigh" body2="right_shin" />
+    <exclude body1="right_shin" body2="right_foot" />
+
+    <exclude body1="pelvis" body2="left_hip" />
+    <exclude body1="pelvis" body2="left_thigh" />
+    <exclude body1="left_hip" body2="left_thigh" />
+    <exclude body1="left_thigh" body2="left_shin" />
+    <exclude body1="left_shin" body2="left_foot" />
+  </contact>
+
+    </mujoco>

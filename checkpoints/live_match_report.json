@@ -1,0 +1,28 @@
+{
+  "timestamp": 1794308018.935661,
+  "time_str": "2026-11-10 16:23:38",
+  "overall_parity_match": false,
+  "swarm_training_gpu": {
+    "iteration": 160,
+    "duration_s": 3.3,
+    "fall_rate_pct": 67.0,
+    "mean_return": 38.91,
+    "push_level_mps": 0.5
+  },
+  "live_mujoco_viewer": {
+    "script": "watch_balance_live_mujoco.py",
+    "episodes_evaluated": 2,
+    "duration_s": 4.15,
+    "fall_rate_pct": 100.0,
+    "mean_return": 6.595,
+    "push_level_mps": 0.5,
+    "wall_time_s": 1.35
+  },
+  "parity_analysis": {
+    "duration_delta_s": 0.85,
+    "fall_rate_delta_pct": 33.0,
+    "duration_parity": "[DISCREPANCY]",
+    "fall_rate_parity": "[DISCREPANCY]",
+    "production_weights_present": "[PASS]"
+  }
+}

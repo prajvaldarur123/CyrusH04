@@ -1,0 +1,20 @@
+Domain,Metric,Value,Unit,Interpretation
+Standing Stability,Success Rate,66.7,%,Uninterrupted standing without fall
+Standing Stability,Uninterrupted Duration Mean,8.06,s,Continuous stable hold
+Standing Stability,Pelvis Height Mean,0.799,m,Nominal 0.84m
+Standing Stability,Roll RMSE,3.17,deg,Lateral tilt deviation
+Standing Stability,Pitch RMSE,6.61,deg,Sagittal tilt deviation
+Standing Stability,Fall Rate,33.3,%,Catastrophic collapse
+Walking Performance,Sustained Velocity Mean,+0.579,m/s,Distance / Time (real walking)
+Walking Performance,Peak Forward Velocity,+1.730,m/s,Single-frame apex velocity
+Walking Performance,Distance Mean,2.41,m,Net translation
+Walking Performance,Velocity Tracking RMSE,0.444,m/s,Command tracking error
+Walking Performance,Steps Completed Mean,2.0,steps,Detected foot strikes
+Gait Quality,Step Symmetry Index (SI),86.7,%,0% = perfect bilateral symmetry
+Gait Quality,Swing Clearance Mean,112.0,mm,Ground clearance during swing
+Gait Quality,Swing Clearance Peak,257.5,mm,Maximum foot apex clearance
+Gait Quality,Foot Slip Velocity,0.000,m/s,Sole horizontal drift in stance
+Push Recovery,Overall Success Rate,9.4,%,8-direction disturbance rejection
+Push Recovery,Max Recoverable Impulse,7.5,N*s,Force * duration threshold
+Self-Righting,Overall Success Rate,0.0,%,Recovery across 4 poses
+Self-Righting,Average Peak Elevation,0.21,m,Height reached during recovery

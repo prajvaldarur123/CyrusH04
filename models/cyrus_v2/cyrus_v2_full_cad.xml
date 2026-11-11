@@ -1,0 +1,1021 @@
+<mujoco model="cyrus_v2_full_cad_81dof">
+  <!-- ======================================================================== -->
+  <!-- CYRUS V2 FULL-CAD 81-DOF HUMANOID ROBOT                                  -->
+  <!--   - Exact Total Mass:      61.3923 kg (Matches v1 cyrus_12dof_mjx.xml)   -->
+  <!--   - Exact Standing Height:  1.4300 m  (Matches v1 head_top site Z)       -->
+  <!--   - Exact Sole Contact Z:   0.0000 m  (Standing on Middle of Human Feet) -->
+  <!--   - Actuated DOFs:          81 (12 Leg, 3 Waist, 14 Arm, 42 Hand,        -->
+  <!--                             3 Neck, 4 Stereo Eye, 2 Eyelid, 1 Jaw)       -->
+  <!--   - CAD Meshes:             21 Smooth Lofted Parametric STL/STEP Parts   -->
+  <!-- ======================================================================== -->
+
+  <compiler angle="radian" coordinate="local" meshdir="meshes" autolimits="true" />
+
+  <option timestep="0.005" iterations="25" ls_iterations="30" solver="Newton" gravity="0 0 -9.80665">
+    <flag warmstart="enable" />
+  </option>
+
+  <visual>
+    <headlight diffuse="0.44 0.46 0.50" ambient="0.22 0.24 0.28" specular="0.25 0.27 0.30" />
+    <rgba haze="0.12 0.14 0.18 1" />
+    <global azimuth="140" elevation="-12" offwidth="1920" offheight="1080" />
+    <map force="0.01" znear="0.02" />
+  </visual>
+
+  <default>
+    <joint armature="0.02" damping="2.0" limited="true" />
+    <geom condim="3" contype="1" conaffinity="1" friction="1.0 0.005 0.0001" solref="0.005 1" solimp="0.9 0.95 0.001" />
+    <position ctrllimited="true" />
+  </default>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.16 0.20 0.27" rgb2="0.05 0.07 0.10" width="512" height="512" />
+    <texture name="grid" type="2d" builtin="checker" rgb1="0.18 0.21 0.26" rgb2="0.12 0.14 0.18" width="512" height="512" mark="edge" markrgb="0.28 0.33 0.40" />
+    <material name="grid" texture="grid" texrepeat="8 8" texuniform="true" reflectance="0.15" />
+
+    <!-- Industrial Metallic Silver & Anodized Gunmetal Materials (Matching Reference Photo) -->
+    <material name="armor_silver"   rgba="0.72 0.75 0.79 1.0" specular="0.50" shininess="0.60" reflectance="0.05" />
+    <material name="armor_white"    rgba="0.82 0.85 0.88 1.0" specular="0.50" shininess="0.60" />
+    <material name="carbon_frame"   rgba="0.16 0.17 0.20 1.0" specular="0.45" shininess="0.55" />
+    <material name="joint_metal"    rgba="0.34 0.37 0.42 1.0" specular="0.75" shininess="0.80" />
+    <material name="chrome_trim"    rgba="0.70 0.73 0.78 1.0" specular="0.85" shininess="0.85" />
+    <material name="anodized_gold"  rgba="0.78 0.60 0.24 1.0" specular="0.75" shininess="0.80" />
+    <material name="shoe_upper"     rgba="0.13 0.14 0.16 1.0" specular="0.38" shininess="0.45" />
+    <material name="sole_rubber"    rgba="0.08 0.09 0.10 1.0" specular="0.12" shininess="0.15" />
+
+    <!-- Sensors & Facial Optics Materials -->
+    <material name="visor_cyan"     rgba="0.00 0.82 0.96 1.0" emission="0.45" specular="0.9" />
+    <material name="core_glow"      rgba="0.00 0.72 0.98 1.0" emission="0.55" specular="0.9" />
+    <material name="sclera_white"   rgba="0.92 0.93 0.95 1.0" specular="0.65" shininess="0.75" />
+    <material name="iris_blue"      rgba="0.12 0.52 0.88 1.0" specular="0.90" shininess="0.95" />
+    <material name="pupil_black"    rgba="0.03 0.03 0.04 1.0" specular="0.95" shininess="0.95" />
+
+    <!-- 21 Smooth Lofted Parametric CAD STL Meshes -->
+    <mesh name="qdd_actuator_large"   file="qdd_actuator_large.stl" />
+    <mesh name="qdd_actuator_medium"  file="qdd_actuator_medium.stl" />
+    <mesh name="qdd_actuator_small"   file="qdd_actuator_small.stl" />
+    <mesh name="human_foot_right"     file="human_foot_right.stl" />
+    <mesh name="human_foot_left"      file="human_foot_left.stl" />
+    <mesh name="foot_sole_right"      file="foot_sole_right.stl" />
+    <mesh name="foot_sole_left"       file="foot_sole_left.stl" />
+    <mesh name="shin_clevis_frame"    file="shin_clevis_frame.stl" />
+    <mesh name="shin_calf_housing"    file="shin_calf_housing.stl" />
+    <mesh name="thigh_armor_shell"    file="thigh_armor_shell.stl" />
+    <mesh name="pelvis_chassis_shell" file="pelvis_chassis_shell.stl" />
+    <mesh name="lumbar_waist_shell"   file="lumbar_waist_shell.stl" />
+    <mesh name="thoracic_torso_shell" file="thoracic_torso_shell.stl" />
+    <mesh name="upper_arm_shell"      file="upper_arm_shell.stl" />
+    <mesh name="forearm_shell"        file="forearm_shell.stl" />
+    <mesh name="palm_chassis_right"   file="palm_chassis_right.stl" />
+    <mesh name="palm_chassis_left"    file="palm_chassis_left.stl" />
+    <mesh name="cranium_head_shell"   file="cranium_head_shell.stl" />
+    <mesh name="mandible_jaw"         file="mandible_jaw.stl" />
+    <mesh name="ankle_ft_sensor"      file="ankle_ft_sensor.stl" />
+    <mesh name="wrist_ft_sensor"      file="wrist_ft_sensor.stl" />
+  </asset>
+
+  <worldbody>
+    <geom name="floor" type="plane" size="25 25 0.1" material="grid" friction="1.2 0.005 0.0001" solref="0.004 1" />
+    <light directional="true" diffuse="0.52 0.54 0.58" specular="0.25 0.25 0.30" pos="2 -2 4" dir="-0.4 0.4 -1" castshadow="true" />
+    <light directional="true" diffuse="0.22 0.24 0.28" specular="0.10 0.10 0.15" pos="-2 2 3" dir="0.4 -0.4 -1" castshadow="false" />
+
+    <!-- Mocap Gaze Target (Hidden in group 4 so no floating green ball clutters the scene) -->
+    <body name="gaze_target" mocap="true" pos="1.5 0.0 1.3">
+      <geom type="sphere" size="0.02" group="4" rgba="0 0 0 0" contype="0" conaffinity="0" />
+    </body>
+
+    <!-- ====================================================================== -->
+    <!-- PELVIS ROOT CHASSIS (z = 0.8400 m)                                     -->
+    <!-- ====================================================================== -->
+    <body name="pelvis" pos="0 0 0.84">
+      <freejoint name="root" />
+      <inertial pos="0.015 0 0.0" mass="6.8000" diaginertia="0.0520 0.0440 0.0580" />
+
+      <!-- Invisible Pelvis Collision Box (group 3) + Smooth Lofted Pelvic CAD Shell -->
+      <geom name="pelvis_geom" type="box" size="0.09 0.12 0.065" group="3" rgba="0 0 0 0" mass="0" />
+      <geom type="mesh" mesh="pelvis_chassis_shell" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+      <!-- Hip Yaw QDD Actuator Stators Mounted in Pelvis -->
+      <geom type="mesh" mesh="qdd_actuator_medium" pos="0 -0.095 -0.025" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+      <geom type="mesh" mesh="qdd_actuator_medium" pos="0  0.095 -0.025" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+
+      <site name="pelvis_imu_site" pos="0 0 0.045" size="0.004" group="4" />
+      <site name="right_pelvis_bus_site" pos="-0.04 -0.09 -0.04" size="0.002" group="4" />
+      <site name="left_pelvis_bus_site"  pos="-0.04  0.09 -0.04" size="0.002" group="4" />
+
+      <!-- ==================================================================== -->
+      <!-- 3-DOF LUMBAR WAIST SPINE (z = +0.10 m -> world 0.9400 m)             -->
+      <!-- ==================================================================== -->
+      <body name="torso_lower" pos="0 0 0.10">
+        <inertial pos="0.010 0 0.010" mass="3.6000" diaginertia="0.0180 0.0180 0.0150" />
+        <joint name="waist_yaw"   type="hinge" axis="0 0 1" range="-1.05 1.05" damping="18.0" armature="0.03" />
+        <joint name="waist_roll"  type="hinge" axis="1 0 0" range="-0.45 0.45" damping="18.0" armature="0.03" />
+        <joint name="waist_pitch" type="hinge" axis="0 1 0" range="-0.45 0.75" damping="24.0" armature="0.04" />
+
+        <!-- Smooth Lofted Lumbar Spine Shell + Waist QDD Actuator Core -->
+        <geom type="mesh" mesh="lumbar_waist_shell" material="carbon_frame" contype="0" conaffinity="0" mass="0" />
+        <geom type="mesh" mesh="qdd_actuator_medium" pos="0 0 -0.015" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+
+        <!-- ================================================================== -->
+        <!-- THORACIC UPPER TORSO + 48V BATTERY + COMPUTE (world z = 1.0800 m)  -->
+        <!-- ================================================================== -->
+        <body name="torso_upper" pos="0 0 0.14">
+          <inertial pos="0.032 0 0.015" mass="14.2523" diaginertia="0.1650 0.1420 0.1180" />
+
+          <!-- Smooth Lofted V-Tapered Thoracic CAD Shell (Clean humanoid chest matching Agile ONE) -->
+          <geom type="mesh" mesh="thoracic_torso_shell" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+
+          <site name="torso_com" pos="0 0 0.05" size="0.005" group="4" />
+          <site name="torso_imu_site" pos="0 0 0.05" size="0.004" group="4" />
+
+          <!-- ================================================================ -->
+          <!-- 3-DOF CERVICAL NECK + 7-DOF ANIMATRONIC HEAD (EYES, LIDS, JAW)   -->
+          <!-- ================================================================ -->
+          <body name="neck" pos="0 0 0.18">
+            <inertial pos="0 0 0.020" mass="0.8200" diaginertia="0.0018 0.0018 0.0012" />
+            <joint name="neck_yaw"   type="hinge" axis="0 0 1" range="-1.40 1.40" damping="0.8" armature="0.004" />
+            <joint name="neck_pitch" type="hinge" axis="0 1 0" range="-0.65 0.65" damping="0.8" armature="0.004" />
+            <joint name="neck_roll"  type="hinge" axis="1 0 0" range="-0.45 0.45" damping="0.8" armature="0.004" />
+
+            <!-- Neck 3-Axis Compact Harmonic Actuator & Twin Cervical Pushrods -->
+            <geom type="mesh" mesh="qdd_actuator_small" pos="0 0 -0.010" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+            <geom type="cylinder" size="0.028 0.036" pos="0 0 0.015" material="carbon_frame" contype="0" conaffinity="0" mass="0" />
+            <geom type="cylinder" size="0.007 0.034" pos="0.016 -0.022 0.015" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+            <geom type="cylinder" size="0.007 0.034" pos="0.016  0.022 0.015" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+
+            <body name="head" pos="0 0 0.08">
+              <inertial pos="0.015 0 0.010" mass="1.6800" diaginertia="0.0058 0.0062 0.0052" />
+
+              <!-- Smooth Lofted Anthropomorphic Cranium Shell (Matching Agile ONE) -->
+              <geom type="mesh" mesh="cranium_head_shell" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+              <!-- Recessed Dark Curved Optical Visor Bay -->
+              <geom type="ellipsoid" size="0.016 0.046 0.018" pos="0.060 0.0 0.016" material="carbon_frame" contype="0" conaffinity="0" mass="0" />
+
+              <camera name="head_realsense_d435i_cam" pos="0.078 0 0.045" euler="0 -1.5708 -1.5708" fovy="69" />
+              <site name="lidar_site" pos="0.0 0 0.082" size="0.004" group="4" />
+
+              <!-- ==================== LEFT ARTICULATED EYE (2-DOF Pan/Tilt) ==================== -->
+              <body name="left_eye" pos="0.060 0.026 0.016">
+                <inertial pos="0 0 0" mass="0.0450" diaginertia="1.0e-5 1.0e-5 1.0e-5" />
+                <joint name="left_eye_pan"  type="hinge" axis="0 0 1" range="-0.65 0.65" damping="0.02" armature="0.0002" />
+                <joint name="left_eye_tilt" type="hinge" axis="0 1 0" range="-0.45 0.45" damping="0.02" armature="0.0002" />
+                <geom type="sphere" size="0.0105" material="sclera_white" contype="0" conaffinity="0" mass="0" />
+                <geom type="cylinder" size="0.0055 0.002" pos="0.0095 0 0" zaxis="1 0 0" material="iris_blue" contype="0" conaffinity="0" mass="0" />
+                <geom type="cylinder" size="0.0028 0.0025" pos="0.0100 0 0" zaxis="1 0 0" material="pupil_black" contype="0" conaffinity="0" mass="0" />
+                <camera name="left_eye_cam" pos="0.011 0 0" euler="0 -1.5708 -1.5708" fovy="60" />
+              </body>
+
+              <!-- ==================== RIGHT ARTICULATED EYE (2-DOF Pan/Tilt) ==================== -->
+              <body name="right_eye" pos="0.060 -0.026 0.016">
+                <inertial pos="0 0 0" mass="0.0450" diaginertia="1.0e-5 1.0e-5 1.0e-5" />
+                <joint name="right_eye_pan"  type="hinge" axis="0 0 1" range="-0.65 0.65" damping="0.02" armature="0.0002" />
+                <joint name="right_eye_tilt" type="hinge" axis="0 1 0" range="-0.45 0.45" damping="0.02" armature="0.0002" />
+                <geom type="sphere" size="0.0105" material="sclera_white" contype="0" conaffinity="0" mass="0" />
+                <geom type="cylinder" size="0.0055 0.002" pos="0.0095 0 0" zaxis="1 0 0" material="iris_blue" contype="0" conaffinity="0" mass="0" />
+                <geom type="cylinder" size="0.0028 0.0025" pos="0.0100 0 0" zaxis="1 0 0" material="pupil_black" contype="0" conaffinity="0" mass="0" />
+                <camera name="right_eye_cam" pos="0.011 0 0" euler="0 -1.5708 -1.5708" fovy="60" />
+              </body>
+
+              <!-- ==================== ARTICULATED UPPER EYELIDS (2-DOF) ==================== -->
+              <body name="left_eyelid" pos="0.060 0.026 0.016">
+                <inertial pos="0 0 0.008" mass="0.0100" diaginertia="2.0e-6 2.0e-6 2.0e-6" />
+                <joint name="left_eyelid" type="hinge" axis="0 1 0" range="0.0 0.85" damping="0.01" armature="0.0001" />
+                <geom type="ellipsoid" size="0.0110 0.0110 0.0030" pos="0.001 0 0.008" euler="0 0.4363 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+              </body>
+
+              <body name="right_eyelid" pos="0.060 -0.026 0.016">
+                <inertial pos="0 0 0.008" mass="0.0100" diaginertia="2.0e-6 2.0e-6 2.0e-6" />
+                <joint name="right_eyelid" type="hinge" axis="0 1 0" range="0.0 0.85" damping="0.01" armature="0.0001" />
+                <geom type="ellipsoid" size="0.0110 0.0110 0.0030" pos="0.001 0 0.008" euler="0 0.4363 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+              </body>
+
+              <!-- ==================== ARTICULATED MANDIBLE JAW / MOUTH (1-DOF) ==================== -->
+              <body name="jaw" pos="0.0 0 -0.018">
+                <inertial pos="0.050 0 -0.018" mass="0.1100" diaginertia="8.0e-5 8.0e-5 8.0e-5" />
+                <joint name="jaw_pitch" type="hinge" axis="0 1 0" range="0.0 0.55" damping="0.15" armature="0.001" />
+                <geom type="mesh" mesh="mandible_jaw" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+              </body>
+
+              <site name="eyes" pos="0.080 0 0.016" size="0.004" group="4" />
+              <site name="head_top" pos="0 0 0.09" size="0.005" group="4" />
+            </body>
+          </body>
+
+          <!-- ==================================================================== -->
+          <!-- RIGHT 7-DOF ANTHROPOMORPHIC ARM + 21-DOF DEXTEROUS HAND        -->
+          <!-- ==================================================================== -->
+          <body name="right_shoulder" pos="0 -0.1850 0.10">
+            <inertial pos="0 -0.0150 -0.010" mass="1.8500" diaginertia="0.0042 0.0042 0.0035" />
+            <joint name="right_shoulder_pitch" type="hinge" axis="0 1 0" range="-2.80 2.00" damping="2.5" armature="0.015" />
+            <joint name="right_shoulder_roll" type="hinge" axis="1 0 0" range="-2.25 0.55" damping="2.5" armature="0.015" />
+
+            <!-- CAD QDD Medium Actuator Module (Shoulder Pitch & Roll) -->
+            <geom type="mesh" mesh="qdd_actuator_medium" euler="1.570796 0 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+            <geom type="cylinder" size="0.038 0.010" zaxis="0 1 0" material="carbon_frame" contype="0" conaffinity="0" mass="0" />
+            <!-- Anatomical Deltoid Armor Cap (Smoothly enclosing the shoulder) -->
+            <geom type="ellipsoid" size="0.046 0.038 0.044" pos="0 -0.0100 0.006" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+            <site name="right_shoulder_wire_site" pos="-0.025 -0.0100 0.0" size="0.002" group="4" />
+
+            <body name="right_upper_arm" pos="0 -0.0400 -0.12">
+              <inertial pos="0 0 -0.040" mass="1.4200" diaginertia="0.0055 0.0055 0.0018" />
+              <joint name="right_shoulder_yaw" type="hinge" axis="0 0 1" range="-2.60 2.60" damping="1.8" armature="0.010" />
+
+              <!-- Humeral QDD Yaw Actuator & Smooth Lofted Upper Arm CAD Shell -->
+              <geom type="mesh" mesh="qdd_actuator_small" pos="0 0 0.055" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+              <geom type="mesh" mesh="upper_arm_shell" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+              <geom type="cylinder" size="0.036 0.006" pos="0 0 0.045" material="carbon_frame" contype="0" conaffinity="0" mass="0" />
+              <geom type="cylinder" size="0.032 0.006" pos="0 0 -0.115" material="carbon_frame" contype="0" conaffinity="0" mass="0" />
+
+              <body name="right_forearm" pos="0 0 -0.15">
+                <inertial pos="0 0 -0.085" mass="1.1800" diaginertia="0.0042 0.0042 0.0014" />
+                <joint name="right_elbow_pitch" type="hinge" axis="0 1 0" range="-0.40 2.35" damping="1.8" armature="0.010" />
+                <joint name="right_wrist_yaw" type="hinge" axis="0 0 1" range="-2.60 2.60" damping="0.8" armature="0.005" />
+
+                <!-- Elbow QDD Actuator Hub & Smooth Lofted Forearm CAD Shell -->
+                <geom type="mesh" mesh="qdd_actuator_small" euler="1.570796 0 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                <geom type="cylinder" size="0.028 0.022" zaxis="0 1 0" material="carbon_frame" contype="0" conaffinity="0" mass="0" />
+                <geom type="mesh" mesh="forearm_shell" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+                <geom type="cylinder" size="0.021 0.006" pos="0 0 -0.172" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                <site name="right_forearm_tendon_origin" pos="0.008 0 -0.155" size="0.002" group="4" />
+
+                <!-- Wrist Pitch Gimbal Link -->
+                <body name="right_wrist_pitch_link" pos="0 0 -0.185">
+                  <inertial pos="0 0 -0.010" mass="0.1600" diaginertia="0.0002 0.0002 0.0002" />
+                  <joint name="right_wrist_pitch" type="hinge" axis="0 1 0" range="-1.20 1.20" damping="0.6" armature="0.003" />
+                  <geom type="cylinder" size="0.016 0.014" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+
+                  <!-- Hand / Palm with 6-Axis Wrist F/T Sensor + 21-DOF 5 Fingers -->
+                  <body name="right_hand" pos="0 0 -0.025">
+                    <inertial pos="0 0 -0.035" mass="0.4600" diaginertia="0.0006 0.0005 0.0003" />
+                    <joint name="right_wrist_roll" type="hinge" axis="1 0 0" range="-0.85 0.85" damping="0.5" armature="0.002" />
+
+                    <!-- 6-Axis Wrist Force/Torque Sensor Ring (CAD Mesh) -->
+                    <geom type="mesh" mesh="wrist_ft_sensor" pos="0 0 0.004" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                    <site name="right_wrist_ft_site" pos="0 0 0.004" size="0.004" group="4" />
+
+                    <!-- Smooth Lofted Anatomical CAD Metacarpal Palm Chassis -->
+                    <geom type="mesh" mesh="palm_chassis_right" material="carbon_frame" contype="0" conaffinity="0" mass="0" />
+                    <!-- Invisible Palmar Tactile Collision Pad (group 3 so no box hides the CAD palm!) -->
+                    <geom name="right_palm_core" type="box" size="0.012 0.030 0.028" pos="0.003 0 -0.040" group="3" rgba="0 0 0 0" friction="1.6 0.005 0.0001" mass="0" />
+                    <site name="right_palm" pos="0.012 0 -0.040" size="0.006" group="4" />
+                    <site name="right_carpal_tunnel_site" pos="0.006 0 -0.015" size="0.002" group="4" />
+                    <site name="right_fingertips" pos="0 0 -0.090" size="0.004" group="4" />
+
+                    <!-- ==================== RIGHT THUMB (5-DOF) ==================== -->
+                    <body name="right_thumb_cmc" pos="0.006 0.0320 -0.028" euler="-0.6109 0.3491 0">
+                      <inertial pos="0 0 -0.005" mass="0.0120" diaginertia="1.2e-6 1.2e-6 1.0e-6" />
+                      <joint name="right_thumb_cmc_abduction" type="hinge" axis="1 0 0" range="-0.60 0.90" damping="0.05" armature="0.0005" />
+                      <joint name="right_thumb_cmc_flexion"   type="hinge" axis="0 1 0" range="-0.40 1.20" damping="0.05" armature="0.0005" />
+                      <geom type="sphere" size="0.0075" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                      <geom type="capsule" fromto="0 0 0 0 0 -0.026" size="0.0068" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+                      <site name="right_thumb_cmc_site" pos="0.005 0 -0.013" size="0.002" group="4" />
+
+                      <body name="right_thumb_proximal" pos="0 0 -0.028">
+                        <inertial pos="0 0 -0.011" mass="0.0100" diaginertia="1.0e-6 1.0e-6 0.8e-6" />
+                        <joint name="right_thumb_mcp_abduction" type="hinge" axis="1 0 0" range="-0.35 0.35" damping="0.04" armature="0.0004" />
+                        <joint name="right_thumb_mcp_flexion"   type="hinge" axis="0 1 0" range="-0.15 1.40" damping="0.04" armature="0.0004" />
+                        <geom type="cylinder" size="0.0068 0.004" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                        <geom type="capsule" fromto="0 0 0 0 0 -0.022" size="0.0060" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+                        <site name="right_thumb_mcp_site" pos="0.005 0 -0.011" size="0.002" group="4" />
+
+                        <body name="right_thumb_distal" pos="0 0 -0.024">
+                          <inertial pos="0 0 -0.009" mass="0.0080" diaginertia="0.8e-6 0.8e-6 0.6e-6" />
+                          <joint name="right_thumb_ip_flexion" type="hinge" axis="0 1 0" range="-0.15 1.55" damping="0.03" armature="0.0003" />
+                          <geom type="cylinder" size="0.0058 0.0035" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                          <geom type="capsule" fromto="0 0 0 0 0 -0.018" size="0.0052" material="carbon_frame" friction="1.5 0.005 0.0001" mass="0" />
+                          <site name="right_thumb_tip" pos="0.003 0 -0.019" size="0.004" group="4" />
+                        </body>
+                      </body>
+                    </body>
+
+                    <!-- ==================== RIGHT INDEX FINGER (4-DOF) ==================== -->
+                    <body name="right_index_proximal" pos="0.000 0.0270 -0.074">
+                      <inertial pos="0 0 -0.0140" mass="0.0140" diaginertia="1.2e-6 1.2e-6 0.8e-6" />
+                      <joint name="right_index_mcp_abduction" type="hinge" axis="1 0 0" range="-0.35 0.35" damping="0.04" armature="0.0004" />
+                      <joint name="right_index_mcp_flexion"   type="hinge" axis="0 1 0" range="-0.20 1.60" damping="0.04" armature="0.0004" />
+                      <geom type="sphere" size="0.0065" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                      <geom type="capsule" fromto="0 0 0 0 0 -0.0280" size="0.0058" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+                      <site name="right_index_mcp_site" pos="0.005 0 -0.0140" size="0.002" group="4" />
+
+                      <body name="right_index_middle" pos="0 0 -0.0300">
+                        <inertial pos="0 0 -0.0100" mass="0.0110" diaginertia="0.9e-6 0.9e-6 0.6e-6" />
+                        <joint name="right_index_pip_flexion" type="hinge" axis="0 1 0" range="0.0 1.75" damping="0.03" armature="0.0003" />
+                        <geom type="cylinder" size="0.0057 0.0038" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                        <geom type="capsule" fromto="0 0 0 0 0 -0.0200" size="0.0052" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+                        <site name="right_index_pip_site" pos="0.004 0 -0.0100" size="0.002" group="4" />
+
+                        <body name="right_index_distal" pos="0 0 -0.0220">
+                          <inertial pos="0 0 -0.0075" mass="0.0100" diaginertia="0.7e-6 0.7e-6 0.5e-6" />
+                          <joint name="right_index_dip_flexion" type="hinge" axis="0 1 0" range="0.0 1.40" damping="0.02" armature="0.0002" />
+                          <geom type="cylinder" size="0.0051 0.0032" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                          <geom type="capsule" fromto="0 0 0 0 0 -0.0150" size="0.0048" material="carbon_frame" friction="1.5 0.005 0.0001" mass="0" />
+                          <site name="right_index_tip" pos="0.003 0 -0.0150" size="0.0035" group="4" />
+                        </body>
+                      </body>
+                    </body>
+
+                    <!-- ==================== RIGHT MIDDLE FINGER (4-DOF) ==================== -->
+                    <body name="right_middle_proximal" pos="0.000 0.0090 -0.074">
+                      <inertial pos="0 0 -0.0155" mass="0.0140" diaginertia="1.2e-6 1.2e-6 0.8e-6" />
+                      <joint name="right_middle_mcp_abduction" type="hinge" axis="1 0 0" range="-0.35 0.35" damping="0.04" armature="0.0004" />
+                      <joint name="right_middle_mcp_flexion"   type="hinge" axis="0 1 0" range="-0.20 1.60" damping="0.04" armature="0.0004" />
+                      <geom type="sphere" size="0.0067" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                      <geom type="capsule" fromto="0 0 0 0 0 -0.0310" size="0.0060" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+                      <site name="right_middle_mcp_site" pos="0.005 0 -0.0155" size="0.002" group="4" />
+
+                      <body name="right_middle_middle" pos="0 0 -0.0330">
+                        <inertial pos="0 0 -0.0110" mass="0.0110" diaginertia="0.9e-6 0.9e-6 0.6e-6" />
+                        <joint name="right_middle_pip_flexion" type="hinge" axis="0 1 0" range="0.0 1.75" damping="0.03" armature="0.0003" />
+                        <geom type="cylinder" size="0.0059 0.0038" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                        <geom type="capsule" fromto="0 0 0 0 0 -0.0220" size="0.0054" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+                        <site name="right_middle_pip_site" pos="0.004 0 -0.0110" size="0.002" group="4" />
+
+                        <body name="right_middle_distal" pos="0 0 -0.0240">
+                          <inertial pos="0 0 -0.0080" mass="0.0100" diaginertia="0.7e-6 0.7e-6 0.5e-6" />
+                          <joint name="right_middle_dip_flexion" type="hinge" axis="0 1 0" range="0.0 1.40" damping="0.02" armature="0.0002" />
+                          <geom type="cylinder" size="0.0053 0.0032" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                          <geom type="capsule" fromto="0 0 0 0 0 -0.0160" size="0.0049" material="carbon_frame" friction="1.5 0.005 0.0001" mass="0" />
+                          <site name="right_middle_tip" pos="0.003 0 -0.0160" size="0.0035" group="4" />
+                        </body>
+                      </body>
+                    </body>
+
+                    <!-- ==================== RIGHT RING FINGER (4-DOF) ==================== -->
+                    <body name="right_ring_proximal" pos="0.000 -0.0090 -0.074">
+                      <inertial pos="0 0 -0.0140" mass="0.0140" diaginertia="1.2e-6 1.2e-6 0.8e-6" />
+                      <joint name="right_ring_mcp_abduction" type="hinge" axis="1 0 0" range="-0.35 0.35" damping="0.04" armature="0.0004" />
+                      <joint name="right_ring_mcp_flexion"   type="hinge" axis="0 1 0" range="-0.20 1.60" damping="0.04" armature="0.0004" />
+                      <geom type="sphere" size="0.0063" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                      <geom type="capsule" fromto="0 0 0 0 0 -0.0280" size="0.0056" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+                      <site name="right_ring_mcp_site" pos="0.005 0 -0.0140" size="0.002" group="4" />
+
+                      <body name="right_ring_middle" pos="0 0 -0.0300">
+                        <inertial pos="0 0 -0.0100" mass="0.0110" diaginertia="0.9e-6 0.9e-6 0.6e-6" />
+                        <joint name="right_ring_pip_flexion" type="hinge" axis="0 1 0" range="0.0 1.75" damping="0.03" armature="0.0003" />
+                        <geom type="cylinder" size="0.0055 0.0038" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                        <geom type="capsule" fromto="0 0 0 0 0 -0.0200" size="0.0050" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+                        <site name="right_ring_pip_site" pos="0.004 0 -0.0100" size="0.002" group="4" />
+
+                        <body name="right_ring_distal" pos="0 0 -0.0220">
+                          <inertial pos="0 0 -0.0075" mass="0.0100" diaginertia="0.7e-6 0.7e-6 0.5e-6" />
+                          <joint name="right_ring_dip_flexion" type="hinge" axis="0 1 0" range="0.0 1.40" damping="0.02" armature="0.0002" />
+                          <geom type="cylinder" size="0.0049 0.0032" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                          <geom type="capsule" fromto="0 0 0 0 0 -0.0150" size="0.0046" material="carbon_frame" friction="1.5 0.005 0.0001" mass="0" />
+                          <site name="right_ring_tip" pos="0.003 0 -0.0150" size="0.0035" group="4" />
+                        </body>
+                      </body>
+                    </body>
+
+                    <!-- ==================== RIGHT PINKY FINGER (4-DOF) ==================== -->
+                    <body name="right_pinky_proximal" pos="0.000 -0.0270 -0.074">
+                      <inertial pos="0 0 -0.0115" mass="0.0140" diaginertia="1.2e-6 1.2e-6 0.8e-6" />
+                      <joint name="right_pinky_mcp_abduction" type="hinge" axis="1 0 0" range="-0.35 0.35" damping="0.04" armature="0.0004" />
+                      <joint name="right_pinky_mcp_flexion"   type="hinge" axis="0 1 0" range="-0.20 1.60" damping="0.04" armature="0.0004" />
+                      <geom type="sphere" size="0.0056" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                      <geom type="capsule" fromto="0 0 0 0 0 -0.0230" size="0.0050" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+                      <site name="right_pinky_mcp_site" pos="0.005 0 -0.0115" size="0.002" group="4" />
+
+                      <body name="right_pinky_middle" pos="0 0 -0.0250">
+                        <inertial pos="0 0 -0.0080" mass="0.0110" diaginertia="0.9e-6 0.9e-6 0.6e-6" />
+                        <joint name="right_pinky_pip_flexion" type="hinge" axis="0 1 0" range="0.0 1.75" damping="0.03" armature="0.0003" />
+                        <geom type="cylinder" size="0.0049 0.0038" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                        <geom type="capsule" fromto="0 0 0 0 0 -0.0160" size="0.0045" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+                        <site name="right_pinky_pip_site" pos="0.004 0 -0.0080" size="0.002" group="4" />
+
+                        <body name="right_pinky_distal" pos="0 0 -0.0180">
+                          <inertial pos="0 0 -0.0065" mass="0.0100" diaginertia="0.7e-6 0.7e-6 0.5e-6" />
+                          <joint name="right_pinky_dip_flexion" type="hinge" axis="0 1 0" range="0.0 1.40" damping="0.02" armature="0.0002" />
+                          <geom type="cylinder" size="0.0044 0.0032" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                          <geom type="capsule" fromto="0 0 0 0 0 -0.0130" size="0.0041" material="carbon_frame" friction="1.5 0.005 0.0001" mass="0" />
+                          <site name="right_pinky_tip" pos="0.003 0 -0.0130" size="0.0035" group="4" />
+                        </body>
+                      </body>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+
+          <!-- ==================================================================== -->
+          <!-- LEFT 7-DOF ANTHROPOMORPHIC ARM + 21-DOF DEXTEROUS HAND        -->
+          <!-- ==================================================================== -->
+          <body name="left_shoulder" pos="0 0.1850 0.10">
+            <inertial pos="0 0.0150 -0.010" mass="1.8500" diaginertia="0.0042 0.0042 0.0035" />
+            <joint name="left_shoulder_pitch" type="hinge" axis="0 1 0" range="-2.80 2.00" damping="2.5" armature="0.015" />
+            <joint name="left_shoulder_roll" type="hinge" axis="1 0 0" range="-0.55 2.25" damping="2.5" armature="0.015" />
+
+            <!-- CAD QDD Medium Actuator Module (Shoulder Pitch & Roll) -->
+            <geom type="mesh" mesh="qdd_actuator_medium" euler="1.570796 0 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+            <geom type="cylinder" size="0.038 0.010" zaxis="0 1 0" material="carbon_frame" contype="0" conaffinity="0" mass="0" />
+            <!-- Anatomical Deltoid Armor Cap (Smoothly enclosing the shoulder) -->
+            <geom type="ellipsoid" size="0.046 0.038 0.044" pos="0 0.0100 0.006" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+            <site name="left_shoulder_wire_site" pos="-0.025 0.0100 0.0" size="0.002" group="4" />
+
+            <body name="left_upper_arm" pos="0 0.0400 -0.12">
+              <inertial pos="0 0 -0.040" mass="1.4200" diaginertia="0.0055 0.0055 0.0018" />
+              <joint name="left_shoulder_yaw" type="hinge" axis="0 0 1" range="-2.60 2.60" damping="1.8" armature="0.010" />
+
+              <!-- Humeral QDD Yaw Actuator & Smooth Lofted Upper Arm CAD Shell -->
+              <geom type="mesh" mesh="qdd_actuator_small" pos="0 0 0.055" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+              <geom type="mesh" mesh="upper_arm_shell" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+              <geom type="cylinder" size="0.036 0.006" pos="0 0 0.045" material="carbon_frame" contype="0" conaffinity="0" mass="0" />
+              <geom type="cylinder" size="0.032 0.006" pos="0 0 -0.115" material="carbon_frame" contype="0" conaffinity="0" mass="0" />
+
+              <body name="left_forearm" pos="0 0 -0.15">
+                <inertial pos="0 0 -0.085" mass="1.1800" diaginertia="0.0042 0.0042 0.0014" />
+                <joint name="left_elbow_pitch" type="hinge" axis="0 1 0" range="-0.40 2.35" damping="1.8" armature="0.010" />
+                <joint name="left_wrist_yaw" type="hinge" axis="0 0 1" range="-2.60 2.60" damping="0.8" armature="0.005" />
+
+                <!-- Elbow QDD Actuator Hub & Smooth Lofted Forearm CAD Shell -->
+                <geom type="mesh" mesh="qdd_actuator_small" euler="1.570796 0 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                <geom type="cylinder" size="0.028 0.022" zaxis="0 1 0" material="carbon_frame" contype="0" conaffinity="0" mass="0" />
+                <geom type="mesh" mesh="forearm_shell" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+                <geom type="cylinder" size="0.021 0.006" pos="0 0 -0.172" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                <site name="left_forearm_tendon_origin" pos="0.008 0 -0.155" size="0.002" group="4" />
+
+                <!-- Wrist Pitch Gimbal Link -->
+                <body name="left_wrist_pitch_link" pos="0 0 -0.185">
+                  <inertial pos="0 0 -0.010" mass="0.1600" diaginertia="0.0002 0.0002 0.0002" />
+                  <joint name="left_wrist_pitch" type="hinge" axis="0 1 0" range="-1.20 1.20" damping="0.6" armature="0.003" />
+                  <geom type="cylinder" size="0.016 0.014" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+
+                  <!-- Hand / Palm with 6-Axis Wrist F/T Sensor + 21-DOF 5 Fingers -->
+                  <body name="left_hand" pos="0 0 -0.025">
+                    <inertial pos="0 0 -0.035" mass="0.4600" diaginertia="0.0006 0.0005 0.0003" />
+                    <joint name="left_wrist_roll" type="hinge" axis="1 0 0" range="-0.85 0.85" damping="0.5" armature="0.002" />
+
+                    <!-- 6-Axis Wrist Force/Torque Sensor Ring (CAD Mesh) -->
+                    <geom type="mesh" mesh="wrist_ft_sensor" pos="0 0 0.004" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                    <site name="left_wrist_ft_site" pos="0 0 0.004" size="0.004" group="4" />
+
+                    <!-- Smooth Lofted Anatomical CAD Metacarpal Palm Chassis -->
+                    <geom type="mesh" mesh="palm_chassis_left" material="carbon_frame" contype="0" conaffinity="0" mass="0" />
+                    <!-- Invisible Palmar Tactile Collision Pad (group 3 so no box hides the CAD palm!) -->
+                    <geom name="left_palm_core" type="box" size="0.012 0.030 0.028" pos="0.003 0 -0.040" group="3" rgba="0 0 0 0" friction="1.6 0.005 0.0001" mass="0" />
+                    <site name="left_palm" pos="0.012 0 -0.040" size="0.006" group="4" />
+                    <site name="left_carpal_tunnel_site" pos="0.006 0 -0.015" size="0.002" group="4" />
+                    <site name="left_fingertips" pos="0 0 -0.090" size="0.004" group="4" />
+
+                    <!-- ==================== LEFT THUMB (5-DOF) ==================== -->
+                    <body name="left_thumb_cmc" pos="0.006 -0.0320 -0.028" euler="0.6109 0.3491 0">
+                      <inertial pos="0 0 -0.005" mass="0.0120" diaginertia="1.2e-6 1.2e-6 1.0e-6" />
+                      <joint name="left_thumb_cmc_abduction" type="hinge" axis="1 0 0" range="-0.60 0.90" damping="0.05" armature="0.0005" />
+                      <joint name="left_thumb_cmc_flexion"   type="hinge" axis="0 1 0" range="-0.40 1.20" damping="0.05" armature="0.0005" />
+                      <geom type="sphere" size="0.0075" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                      <geom type="capsule" fromto="0 0 0 0 0 -0.026" size="0.0068" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+                      <site name="left_thumb_cmc_site" pos="0.005 0 -0.013" size="0.002" group="4" />
+
+                      <body name="left_thumb_proximal" pos="0 0 -0.028">
+                        <inertial pos="0 0 -0.011" mass="0.0100" diaginertia="1.0e-6 1.0e-6 0.8e-6" />
+                        <joint name="left_thumb_mcp_abduction" type="hinge" axis="1 0 0" range="-0.35 0.35" damping="0.04" armature="0.0004" />
+                        <joint name="left_thumb_mcp_flexion"   type="hinge" axis="0 1 0" range="-0.15 1.40" damping="0.04" armature="0.0004" />
+                        <geom type="cylinder" size="0.0068 0.004" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                        <geom type="capsule" fromto="0 0 0 0 0 -0.022" size="0.0060" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+                        <site name="left_thumb_mcp_site" pos="0.005 0 -0.011" size="0.002" group="4" />
+
+                        <body name="left_thumb_distal" pos="0 0 -0.024">
+                          <inertial pos="0 0 -0.009" mass="0.0080" diaginertia="0.8e-6 0.8e-6 0.6e-6" />
+                          <joint name="left_thumb_ip_flexion" type="hinge" axis="0 1 0" range="-0.15 1.55" damping="0.03" armature="0.0003" />
+                          <geom type="cylinder" size="0.0058 0.0035" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                          <geom type="capsule" fromto="0 0 0 0 0 -0.018" size="0.0052" material="carbon_frame" friction="1.5 0.005 0.0001" mass="0" />
+                          <site name="left_thumb_tip" pos="0.003 0 -0.019" size="0.004" group="4" />
+                        </body>
+                      </body>
+                    </body>
+
+                    <!-- ==================== LEFT INDEX FINGER (4-DOF) ==================== -->
+                    <body name="left_index_proximal" pos="0.000 -0.0270 -0.074">
+                      <inertial pos="0 0 -0.0140" mass="0.0140" diaginertia="1.2e-6 1.2e-6 0.8e-6" />
+                      <joint name="left_index_mcp_abduction" type="hinge" axis="1 0 0" range="-0.35 0.35" damping="0.04" armature="0.0004" />
+                      <joint name="left_index_mcp_flexion"   type="hinge" axis="0 1 0" range="-0.20 1.60" damping="0.04" armature="0.0004" />
+                      <geom type="sphere" size="0.0065" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                      <geom type="capsule" fromto="0 0 0 0 0 -0.0280" size="0.0058" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+                      <site name="left_index_mcp_site" pos="0.005 0 -0.0140" size="0.002" group="4" />
+
+                      <body name="left_index_middle" pos="0 0 -0.0300">
+                        <inertial pos="0 0 -0.0100" mass="0.0110" diaginertia="0.9e-6 0.9e-6 0.6e-6" />
+                        <joint name="left_index_pip_flexion" type="hinge" axis="0 1 0" range="0.0 1.75" damping="0.03" armature="0.0003" />
+                        <geom type="cylinder" size="0.0057 0.0038" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                        <geom type="capsule" fromto="0 0 0 0 0 -0.0200" size="0.0052" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+                        <site name="left_index_pip_site" pos="0.004 0 -0.0100" size="0.002" group="4" />
+
+                        <body name="left_index_distal" pos="0 0 -0.0220">
+                          <inertial pos="0 0 -0.0075" mass="0.0100" diaginertia="0.7e-6 0.7e-6 0.5e-6" />
+                          <joint name="left_index_dip_flexion" type="hinge" axis="0 1 0" range="0.0 1.40" damping="0.02" armature="0.0002" />
+                          <geom type="cylinder" size="0.0051 0.0032" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                          <geom type="capsule" fromto="0 0 0 0 0 -0.0150" size="0.0048" material="carbon_frame" friction="1.5 0.005 0.0001" mass="0" />
+                          <site name="left_index_tip" pos="0.003 0 -0.0150" size="0.0035" group="4" />
+                        </body>
+                      </body>
+                    </body>
+
+                    <!-- ==================== LEFT MIDDLE FINGER (4-DOF) ==================== -->
+                    <body name="left_middle_proximal" pos="0.000 -0.0090 -0.074">
+                      <inertial pos="0 0 -0.0155" mass="0.0140" diaginertia="1.2e-6 1.2e-6 0.8e-6" />
+                      <joint name="left_middle_mcp_abduction" type="hinge" axis="1 0 0" range="-0.35 0.35" damping="0.04" armature="0.0004" />
+                      <joint name="left_middle_mcp_flexion"   type="hinge" axis="0 1 0" range="-0.20 1.60" damping="0.04" armature="0.0004" />
+                      <geom type="sphere" size="0.0067" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                      <geom type="capsule" fromto="0 0 0 0 0 -0.0310" size="0.0060" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+                      <site name="left_middle_mcp_site" pos="0.005 0 -0.0155" size="0.002" group="4" />
+
+                      <body name="left_middle_middle" pos="0 0 -0.0330">
+                        <inertial pos="0 0 -0.0110" mass="0.0110" diaginertia="0.9e-6 0.9e-6 0.6e-6" />
+                        <joint name="left_middle_pip_flexion" type="hinge" axis="0 1 0" range="0.0 1.75" damping="0.03" armature="0.0003" />
+                        <geom type="cylinder" size="0.0059 0.0038" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                        <geom type="capsule" fromto="0 0 0 0 0 -0.0220" size="0.0054" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+                        <site name="left_middle_pip_site" pos="0.004 0 -0.0110" size="0.002" group="4" />
+
+                        <body name="left_middle_distal" pos="0 0 -0.0240">
+                          <inertial pos="0 0 -0.0080" mass="0.0100" diaginertia="0.7e-6 0.7e-6 0.5e-6" />
+                          <joint name="left_middle_dip_flexion" type="hinge" axis="0 1 0" range="0.0 1.40" damping="0.02" armature="0.0002" />
+                          <geom type="cylinder" size="0.0053 0.0032" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                          <geom type="capsule" fromto="0 0 0 0 0 -0.0160" size="0.0049" material="carbon_frame" friction="1.5 0.005 0.0001" mass="0" />
+                          <site name="left_middle_tip" pos="0.003 0 -0.0160" size="0.0035" group="4" />
+                        </body>
+                      </body>
+                    </body>
+
+                    <!-- ==================== LEFT RING FINGER (4-DOF) ==================== -->
+                    <body name="left_ring_proximal" pos="0.000 0.0090 -0.074">
+                      <inertial pos="0 0 -0.0140" mass="0.0140" diaginertia="1.2e-6 1.2e-6 0.8e-6" />
+                      <joint name="left_ring_mcp_abduction" type="hinge" axis="1 0 0" range="-0.35 0.35" damping="0.04" armature="0.0004" />
+                      <joint name="left_ring_mcp_flexion"   type="hinge" axis="0 1 0" range="-0.20 1.60" damping="0.04" armature="0.0004" />
+                      <geom type="sphere" size="0.0063" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                      <geom type="capsule" fromto="0 0 0 0 0 -0.0280" size="0.0056" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+                      <site name="left_ring_mcp_site" pos="0.005 0 -0.0140" size="0.002" group="4" />
+
+                      <body name="left_ring_middle" pos="0 0 -0.0300">
+                        <inertial pos="0 0 -0.0100" mass="0.0110" diaginertia="0.9e-6 0.9e-6 0.6e-6" />
+                        <joint name="left_ring_pip_flexion" type="hinge" axis="0 1 0" range="0.0 1.75" damping="0.03" armature="0.0003" />
+                        <geom type="cylinder" size="0.0055 0.0038" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                        <geom type="capsule" fromto="0 0 0 0 0 -0.0200" size="0.0050" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+                        <site name="left_ring_pip_site" pos="0.004 0 -0.0100" size="0.002" group="4" />
+
+                        <body name="left_ring_distal" pos="0 0 -0.0220">
+                          <inertial pos="0 0 -0.0075" mass="0.0100" diaginertia="0.7e-6 0.7e-6 0.5e-6" />
+                          <joint name="left_ring_dip_flexion" type="hinge" axis="0 1 0" range="0.0 1.40" damping="0.02" armature="0.0002" />
+                          <geom type="cylinder" size="0.0049 0.0032" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                          <geom type="capsule" fromto="0 0 0 0 0 -0.0150" size="0.0046" material="carbon_frame" friction="1.5 0.005 0.0001" mass="0" />
+                          <site name="left_ring_tip" pos="0.003 0 -0.0150" size="0.0035" group="4" />
+                        </body>
+                      </body>
+                    </body>
+
+                    <!-- ==================== LEFT PINKY FINGER (4-DOF) ==================== -->
+                    <body name="left_pinky_proximal" pos="0.000 0.0270 -0.074">
+                      <inertial pos="0 0 -0.0115" mass="0.0140" diaginertia="1.2e-6 1.2e-6 0.8e-6" />
+                      <joint name="left_pinky_mcp_abduction" type="hinge" axis="1 0 0" range="-0.35 0.35" damping="0.04" armature="0.0004" />
+                      <joint name="left_pinky_mcp_flexion"   type="hinge" axis="0 1 0" range="-0.20 1.60" damping="0.04" armature="0.0004" />
+                      <geom type="sphere" size="0.0056" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                      <geom type="capsule" fromto="0 0 0 0 0 -0.0230" size="0.0050" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+                      <site name="left_pinky_mcp_site" pos="0.005 0 -0.0115" size="0.002" group="4" />
+
+                      <body name="left_pinky_middle" pos="0 0 -0.0250">
+                        <inertial pos="0 0 -0.0080" mass="0.0110" diaginertia="0.9e-6 0.9e-6 0.6e-6" />
+                        <joint name="left_pinky_pip_flexion" type="hinge" axis="0 1 0" range="0.0 1.75" damping="0.03" armature="0.0003" />
+                        <geom type="cylinder" size="0.0049 0.0038" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                        <geom type="capsule" fromto="0 0 0 0 0 -0.0160" size="0.0045" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+                        <site name="left_pinky_pip_site" pos="0.004 0 -0.0080" size="0.002" group="4" />
+
+                        <body name="left_pinky_distal" pos="0 0 -0.0180">
+                          <inertial pos="0 0 -0.0065" mass="0.0100" diaginertia="0.7e-6 0.7e-6 0.5e-6" />
+                          <joint name="left_pinky_dip_flexion" type="hinge" axis="0 1 0" range="0.0 1.40" damping="0.02" armature="0.0002" />
+                          <geom type="cylinder" size="0.0044 0.0032" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+                          <geom type="capsule" fromto="0 0 0 0 0 -0.0130" size="0.0041" material="carbon_frame" friction="1.5 0.005 0.0001" mass="0" />
+                          <site name="left_pinky_tip" pos="0.003 0 -0.0130" size="0.0035" group="4" />
+                        </body>
+                      </body>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+
+      <!-- ==================================================================== -->
+      <!-- RIGHT 6-DOF LEG + ANATOMICAL HUMAN SHOE (PHOTO-ACCURATE CAD)   -->
+      <!-- ==================================================================== -->
+      <body name="right_hip" pos="0 -0.1100 -0.06">
+        <inertial pos="0 -0.0100 -0.020" mass="2.1500" diaginertia="0.0065 0.0065 0.0055" />
+        <joint name="right_hip_yaw" type="hinge" axis="0 0 1" range="-0.6 0.6" damping="3.5" />
+        <joint name="right_hip_roll" type="hinge" axis="1 0 0" range="-0.6 0.6" damping="3.5" />
+        <joint name="right_hip_pitch" type="hinge" axis="0 1 0" range="-1.4 0.8" damping="4.0" />
+
+        <!-- Hip 3-Axis QDD Actuator Cluster (CAD Meshes) -->
+        <geom type="mesh" mesh="qdd_actuator_large" euler="1.570796 0 0" pos="0 0 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+        <site name="right_hip_harness_site" pos="-0.032 -0.0100 -0.02" size="0.002" group="4" />
+
+        <body name="right_thigh" pos="0 0 -0.20">
+          <inertial pos="0 0 -0.010" mass="4.6500" diaginertia="0.0380 0.0380 0.0085" />
+          <!-- Smooth Tapered Silver Metallic Thigh Shell (Matching Reference Photo) -->
+          <geom type="mesh" mesh="thigh_armor_shell" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+          <site name="right_thigh_harness_site" pos="-0.028 -0.0100 -0.15" size="0.002" group="4" />
+
+          <body name="right_shin" pos="0 0 -0.20">
+            <inertial pos="0.005 0 -0.150" mass="3.7200" diaginertia="0.0320 0.0320 0.0060" />
+            <joint name="right_knee" type="hinge" axis="0 1 0" range="0.0 2.2" damping="3.5" />
+
+            <!-- Knee Circular QDD Actuator Hub + Lateral Dark Cap & Medial Silver Disc (Matching Photo) -->
+            <geom type="mesh" mesh="qdd_actuator_large" euler="1.570796 0 0" material="carbon_frame" contype="0" conaffinity="0" mass="0" />
+            <geom type="cylinder" size="0.043 0.006" pos="0 -0.0300 0" zaxis="0 1 0" material="carbon_frame" contype="0" conaffinity="0" mass="0" />
+            <geom type="cylinder" size="0.036 0.005" pos="0 0.0290 0" zaxis="0 1 0" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+
+            <!-- Smooth Sculpted Silver Anterior Shin Fairing + Ankle Clevis + Ribbed Lower Plate -->
+            <geom type="mesh" mesh="shin_clevis_frame" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+            <!-- Smooth Contoured Dark Posterior Calf Structural Housing -->
+            <geom type="mesh" mesh="shin_calf_housing" material="carbon_frame" contype="0" conaffinity="0" mass="0" />
+
+            <!-- Recessed Internal Linear Ankle Pushrods (Tucked Inside Calf Contour) -->
+            <geom type="capsule" fromto="-0.018 -0.016 -0.16 -0.014 -0.018 -0.33" size="0.005" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+            <geom type="capsule" fromto="-0.018  0.016 -0.16 -0.014  0.018 -0.33" size="0.005" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+
+            <!-- Brushed Silver Ankle Pivot Bolts Sitting Inside the Shoe Heel Cup -->
+            <geom type="cylinder" size="0.016 0.005" pos="0 -0.031 -0.34" zaxis="0 1 0" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+            <geom type="cylinder" size="0.016 0.005" pos="0  0.031 -0.34" zaxis="0 1 0" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+            <site name="right_shin_harness_site" pos="-0.018 0 -0.31" size="0.002" group="4" />
+
+            <!-- ANATOMICAL HUMAN-PROPORTIONED SHOE / FOOT (Standing on Middle of Feet) -->
+            <!-- Ankle Joint at z = -0.34m (4.0 cm above floor) -->
+            <body name="right_foot" pos="0 0 -0.34">
+              <inertial pos="0.020 0 -0.020" mass="1.2500" diaginertia="0.0022 0.0068 0.0075" />
+              <joint name="right_ankle_pitch" type="hinge" axis="0 1 0" range="-0.8 0.8" damping="2.5" />
+              <joint name="right_ankle_roll" type="hinge" axis="1 0 0" range="-0.4 0.4" damping="2.5" />
+
+              <!-- Recessed 6-Axis Ankle Force/Torque Load Cell Puck (Inside Ankle Cuff) -->
+              <geom type="mesh" mesh="ankle_ft_sensor" pos="0 0 -0.004" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+              <site name="right_ankle_ft_site" pos="0 0 -0.008" size="0.004" group="4" />
+
+              <!-- INVISIBLE PHYSICS PLANTAR COLLISION PRIMITIVE (group="3" rgba="0 0 0 0") -->
+              <!-- Provides 100% stable flat floor contact from -12.5cm to +15.0cm WITHOUT drawing a box! -->
+              <geom name="right_foot_geom" type="box" pos="0.0125 0 -0.025" size="0.1375 0.054 0.015" group="3" rgba="0 0 0 0" friction="1.4 0.01 0.005" condim="6" solref="0.005 1" solimp="0.95 0.99 0.001 0.5 2" mass="0" />
+
+              <!-- SCULPTED LOFTED CAD HUMAN SHOE UPPER + CONTOURED RUBBER OUTSOLE -->
+              <geom type="mesh" mesh="human_foot_right" material="shoe_upper" contype="0" conaffinity="0" mass="0" />
+              <geom type="mesh" mesh="foot_sole_right" material="sole_rubber" contype="0" conaffinity="0" mass="0" />
+
+              <!-- 4-Corner Plantar Pressure FSR Sensor Sites (group="4" so no boxes protrude) -->
+              <site name="right_heel_med_site" pos="-0.075 0.0220 -0.039" size="0.004" group="4" />
+              <site name="right_heel_lat_site" pos="-0.075 -0.0220 -0.039" size="0.004" group="4" />
+              <site name="right_meta_med_site" pos=" 0.095 0.0240 -0.039" size="0.004" group="4" />
+              <site name="right_meta_lat_site" pos=" 0.095 -0.0240 -0.039" size="0.004" group="4" />
+
+              <!-- Center of Sole Site at z = -0.040m (world z = 0.0000m) -->
+              <site name="right_sole" pos="0.020 0 -0.040" size="0.006" group="4" />
+            </body>
+          </body>
+        </body>
+      </body>
+
+      <!-- ==================================================================== -->
+      <!-- LEFT 6-DOF LEG + ANATOMICAL HUMAN SHOE (PHOTO-ACCURATE CAD)   -->
+      <!-- ==================================================================== -->
+      <body name="left_hip" pos="0 0.1100 -0.06">
+        <inertial pos="0 0.0100 -0.020" mass="2.1500" diaginertia="0.0065 0.0065 0.0055" />
+        <joint name="left_hip_yaw" type="hinge" axis="0 0 1" range="-0.6 0.6" damping="3.5" />
+        <joint name="left_hip_roll" type="hinge" axis="1 0 0" range="-0.6 0.6" damping="3.5" />
+        <joint name="left_hip_pitch" type="hinge" axis="0 1 0" range="-1.4 0.8" damping="4.0" />
+
+        <!-- Hip 3-Axis QDD Actuator Cluster (CAD Meshes) -->
+        <geom type="mesh" mesh="qdd_actuator_large" euler="1.570796 0 0" pos="0 0 0" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+        <site name="left_hip_harness_site" pos="-0.032 0.0100 -0.02" size="0.002" group="4" />
+
+        <body name="left_thigh" pos="0 0 -0.20">
+          <inertial pos="0 0 -0.010" mass="4.6500" diaginertia="0.0380 0.0380 0.0085" />
+          <!-- Smooth Tapered Silver Metallic Thigh Shell (Matching Reference Photo) -->
+          <geom type="mesh" mesh="thigh_armor_shell" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+          <site name="left_thigh_harness_site" pos="-0.028 0.0100 -0.15" size="0.002" group="4" />
+
+          <body name="left_shin" pos="0 0 -0.20">
+            <inertial pos="0.005 0 -0.150" mass="3.7200" diaginertia="0.0320 0.0320 0.0060" />
+            <joint name="left_knee" type="hinge" axis="0 1 0" range="0.0 2.2" damping="3.5" />
+
+            <!-- Knee Circular QDD Actuator Hub + Lateral Dark Cap & Medial Silver Disc (Matching Photo) -->
+            <geom type="mesh" mesh="qdd_actuator_large" euler="1.570796 0 0" material="carbon_frame" contype="0" conaffinity="0" mass="0" />
+            <geom type="cylinder" size="0.043 0.006" pos="0 0.0300 0" zaxis="0 1 0" material="carbon_frame" contype="0" conaffinity="0" mass="0" />
+            <geom type="cylinder" size="0.036 0.005" pos="0 -0.0290 0" zaxis="0 1 0" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+
+            <!-- Smooth Sculpted Silver Anterior Shin Fairing + Ankle Clevis + Ribbed Lower Plate -->
+            <geom type="mesh" mesh="shin_clevis_frame" material="armor_silver" contype="0" conaffinity="0" mass="0" />
+            <!-- Smooth Contoured Dark Posterior Calf Structural Housing -->
+            <geom type="mesh" mesh="shin_calf_housing" material="carbon_frame" contype="0" conaffinity="0" mass="0" />
+
+            <!-- Recessed Internal Linear Ankle Pushrods (Tucked Inside Calf Contour) -->
+            <geom type="capsule" fromto="-0.018 -0.016 -0.16 -0.014 -0.018 -0.33" size="0.005" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+            <geom type="capsule" fromto="-0.018  0.016 -0.16 -0.014  0.018 -0.33" size="0.005" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+
+            <!-- Brushed Silver Ankle Pivot Bolts Sitting Inside the Shoe Heel Cup -->
+            <geom type="cylinder" size="0.016 0.005" pos="0 -0.031 -0.34" zaxis="0 1 0" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+            <geom type="cylinder" size="0.016 0.005" pos="0  0.031 -0.34" zaxis="0 1 0" material="chrome_trim" contype="0" conaffinity="0" mass="0" />
+            <site name="left_shin_harness_site" pos="-0.018 0 -0.31" size="0.002" group="4" />
+
+            <!-- ANATOMICAL HUMAN-PROPORTIONED SHOE / FOOT (Standing on Middle of Feet) -->
+            <!-- Ankle Joint at z = -0.34m (4.0 cm above floor) -->
+            <body name="left_foot" pos="0 0 -0.34">
+              <inertial pos="0.020 0 -0.020" mass="1.2500" diaginertia="0.0022 0.0068 0.0075" />
+              <joint name="left_ankle_pitch" type="hinge" axis="0 1 0" range="-0.8 0.8" damping="2.5" />
+              <joint name="left_ankle_roll" type="hinge" axis="1 0 0" range="-0.4 0.4" damping="2.5" />
+
+              <!-- Recessed 6-Axis Ankle Force/Torque Load Cell Puck (Inside Ankle Cuff) -->
+              <geom type="mesh" mesh="ankle_ft_sensor" pos="0 0 -0.004" material="joint_metal" contype="0" conaffinity="0" mass="0" />
+              <site name="left_ankle_ft_site" pos="0 0 -0.008" size="0.004" group="4" />
+
+              <!-- INVISIBLE PHYSICS PLANTAR COLLISION PRIMITIVE (group="3" rgba="0 0 0 0") -->
+              <!-- Provides 100% stable flat floor contact from -12.5cm to +15.0cm WITHOUT drawing a box! -->
+              <geom name="left_foot_geom" type="box" pos="0.0125 0 -0.025" size="0.1375 0.054 0.015" group="3" rgba="0 0 0 0" friction="1.4 0.01 0.005" condim="6" solref="0.005 1" solimp="0.95 0.99 0.001 0.5 2" mass="0" />
+
+              <!-- SCULPTED LOFTED CAD HUMAN SHOE UPPER + CONTOURED RUBBER OUTSOLE -->
+              <geom type="mesh" mesh="human_foot_left" material="shoe_upper" contype="0" conaffinity="0" mass="0" />
+              <geom type="mesh" mesh="foot_sole_left" material="sole_rubber" contype="0" conaffinity="0" mass="0" />
+
+              <!-- 4-Corner Plantar Pressure FSR Sensor Sites (group="4" so no boxes protrude) -->
+              <site name="left_heel_med_site" pos="-0.075 -0.0220 -0.039" size="0.004" group="4" />
+              <site name="left_heel_lat_site" pos="-0.075 0.0220 -0.039" size="0.004" group="4" />
+              <site name="left_meta_med_site" pos=" 0.095 -0.0240 -0.039" size="0.004" group="4" />
+              <site name="left_meta_lat_site" pos=" 0.095 0.0240 -0.039" size="0.004" group="4" />
+
+              <!-- Center of Sole Site at z = -0.040m (world z = 0.0000m) -->
+              <site name="left_sole" pos="0.020 0 -0.040" size="0.006" group="4" />
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <!-- ================================================================== -->
+    <!-- CHANNELS 0..11: 12-DOF BIPEDAL LEGS (100% Backwards-Compatible)    -->
+    <!-- ================================================================== -->
+    <position name="right_hip_yaw_act"     joint="right_hip_yaw"     kp="350" kv="35" ctrlrange="-0.6 0.6" forcerange="-140 140" />
+    <position name="right_hip_roll_act"    joint="right_hip_roll"    kp="180" kv="18" ctrlrange="-0.6 0.6" forcerange="-180 180" />
+    <position name="right_hip_pitch_act"   joint="right_hip_pitch"   kp="700" kv="70" ctrlrange="-1.4 0.8" forcerange="-240 240" />
+    <position name="right_knee_act"        joint="right_knee"        kp="800" kv="80" ctrlrange="0.0 2.2"  forcerange="-260 260" />
+    <position name="right_ankle_pitch_act" joint="right_ankle_pitch" kp="600" kv="60" ctrlrange="-0.8 0.8" forcerange="-180 180" />
+    <position name="right_ankle_roll_act"  joint="right_ankle_roll"  kp="150" kv="15" ctrlrange="-0.4 0.4" forcerange="-130 130" />
+
+    <position name="left_hip_yaw_act"      joint="left_hip_yaw"      kp="350" kv="35" ctrlrange="-0.6 0.6" forcerange="-140 140" />
+    <position name="left_hip_roll_act"     joint="left_hip_roll"     kp="180" kv="18" ctrlrange="-0.6 0.6" forcerange="-180 180" />
+    <position name="left_hip_pitch_act"    joint="left_hip_pitch"    kp="700" kv="70" ctrlrange="-1.4 0.8" forcerange="-240 240" />
+    <position name="left_knee_act"         joint="left_knee"         kp="800" kv="80" ctrlrange="0.0 2.2"  forcerange="-260 260" />
+    <position name="left_ankle_pitch_act"  joint="left_ankle_pitch"  kp="600" kv="60" ctrlrange="-0.8 0.8" forcerange="-180 180" />
+    <position name="left_ankle_roll_act"   joint="left_ankle_roll"   kp="150" kv="15" ctrlrange="-0.4 0.4" forcerange="-130 130" />
+
+    <!-- ================================================================== -->
+    <!-- CHANNELS 12..14: 3-DOF WAIST / LUMBAR SPINE                        -->
+    <!-- ================================================================== -->
+    <position name="waist_yaw_act"   joint="waist_yaw"   kp="1200" kv="100" ctrlrange="-1.05 1.05" forcerange="-300 300" />
+    <position name="waist_roll_act"  joint="waist_roll"  kp="1200" kv="100" ctrlrange="-0.45 0.45" forcerange="-300 300" />
+    <position name="waist_pitch_act" joint="waist_pitch" kp="1800" kv="140" ctrlrange="-0.45 0.75" forcerange="-360 360" />
+
+    <!-- ================================================================== -->
+    <!-- CHANNELS 15..24: 3-DOF NECK + 7-DOF ANIMATRONIC HEAD / EYES / JAW  -->
+    <!-- ================================================================== -->
+    <position name="neck_yaw_act"     joint="neck_yaw"     kp="40" kv="4" ctrlrange="-1.40 1.40" forcerange="-15 15" />
+    <position name="neck_pitch_act"   joint="neck_pitch"   kp="40" kv="4" ctrlrange="-0.65 0.65" forcerange="-15 15" />
+    <position name="neck_roll_act"    joint="neck_roll"    kp="40" kv="4" ctrlrange="-0.45 0.45" forcerange="-15 15" />
+    <position name="left_eye_pan_act"   joint="left_eye_pan"   kp="2.0" kv="0.1" ctrlrange="-0.65 0.65" forcerange="-1 1" />
+    <position name="left_eye_tilt_act"  joint="left_eye_tilt"  kp="2.0" kv="0.1" ctrlrange="-0.45 0.45" forcerange="-1 1" />
+    <position name="right_eye_pan_act"  joint="right_eye_pan"  kp="2.0" kv="0.1" ctrlrange="-0.65 0.65" forcerange="-1 1" />
+    <position name="right_eye_tilt_act" joint="right_eye_tilt" kp="2.0" kv="0.1" ctrlrange="-0.45 0.45" forcerange="-1 1" />
+    <position name="left_eyelid_act"    joint="left_eyelid"    kp="1.5" kv="0.08" ctrlrange="0.0 0.85"  forcerange="-0.5 0.5" />
+    <position name="right_eyelid_act"   joint="right_eyelid"   kp="1.5" kv="0.08" ctrlrange="0.0 0.85"  forcerange="-0.5 0.5" />
+    <position name="jaw_pitch_act"      joint="jaw_pitch"      kp="5.0" kv="0.3"  ctrlrange="0.0 0.55"  forcerange="-3 3" />
+
+    <!-- ==================== RIGHT 7-DOF ARM ==================== -->
+    <position name="right_shoulder_pitch_act" joint="right_shoulder_pitch" kp="120" kv="12" ctrlrange="-2.80 2.00" forcerange="-60 60" />
+    <position name="right_shoulder_roll_act"  joint="right_shoulder_roll"  kp="120" kv="12" ctrlrange="-2.25 0.55" forcerange="-60 60" />
+    <position name="right_shoulder_yaw_act"   joint="right_shoulder_yaw"   kp="80"  kv="8"  ctrlrange="-2.60 2.60" forcerange="-40 40" />
+    <position name="right_elbow_pitch_act"    joint="right_elbow_pitch"    kp="90"  kv="9"  ctrlrange="-0.40 2.35" forcerange="-45 45" />
+    <position name="right_wrist_yaw_act"      joint="right_wrist_yaw"      kp="30"  kv="3"  ctrlrange="-2.60 2.60" forcerange="-18 18" />
+    <position name="right_wrist_pitch_act"    joint="right_wrist_pitch"    kp="25"  kv="2.5" ctrlrange="-1.20 1.20" forcerange="-12 12" />
+    <position name="right_wrist_roll_act"     joint="right_wrist_roll"     kp="25"  kv="2.5" ctrlrange="-0.85 0.85" forcerange="-12 12" />
+
+    <!-- ==================== RIGHT 21-DOF DEXTEROUS HAND ==================== -->
+    <position name="right_thumb_cmc_abduction_act" joint="right_thumb_cmc_abduction" kp="4.0" kv="0.25" ctrlrange="-0.6 0.9"   forcerange="-3 3" />
+    <position name="right_thumb_cmc_flexion_act"   joint="right_thumb_cmc_flexion"   kp="4.0" kv="0.25" ctrlrange="-0.4 1.2"   forcerange="-3 3" />
+    <position name="right_thumb_mcp_abduction_act" joint="right_thumb_mcp_abduction" kp="3.0" kv="0.20" ctrlrange="-0.35 0.35" forcerange="-2 2" />
+    <position name="right_thumb_mcp_flexion_act"   joint="right_thumb_mcp_flexion"   kp="3.5" kv="0.20" ctrlrange="-0.15 1.40" forcerange="-2.5 2.5" />
+    <position name="right_thumb_ip_flexion_act"    joint="right_thumb_ip_flexion"    kp="2.5" kv="0.15" ctrlrange="-0.15 1.55" forcerange="-2 2" />
+    <position name="right_index_mcp_abduction_act" joint="right_index_mcp_abduction" kp="2.5" kv="0.15" ctrlrange="-0.35 0.35" forcerange="-1.8 1.8" />
+    <position name="right_index_mcp_flexion_act"   joint="right_index_mcp_flexion"   kp="3.5" kv="0.20" ctrlrange="-0.20 1.60" forcerange="-2.5 2.5" />
+    <position name="right_index_pip_flexion_act"   joint="right_index_pip_flexion"   kp="2.8" kv="0.15" ctrlrange="0.0 1.75"  forcerange="-2.0 2.0" />
+    <position name="right_index_dip_flexion_act"   joint="right_index_dip_flexion"   kp="2.0" kv="0.12" ctrlrange="0.0 1.40"  forcerange="-1.5 1.5" />
+    <position name="right_middle_mcp_abduction_act" joint="right_middle_mcp_abduction" kp="2.5" kv="0.15" ctrlrange="-0.35 0.35" forcerange="-1.8 1.8" />
+    <position name="right_middle_mcp_flexion_act"   joint="right_middle_mcp_flexion"   kp="3.5" kv="0.20" ctrlrange="-0.20 1.60" forcerange="-2.5 2.5" />
+    <position name="right_middle_pip_flexion_act"   joint="right_middle_pip_flexion"   kp="2.8" kv="0.15" ctrlrange="0.0 1.75"  forcerange="-2.0 2.0" />
+    <position name="right_middle_dip_flexion_act"   joint="right_middle_dip_flexion"   kp="2.0" kv="0.12" ctrlrange="0.0 1.40"  forcerange="-1.5 1.5" />
+    <position name="right_ring_mcp_abduction_act" joint="right_ring_mcp_abduction" kp="2.5" kv="0.15" ctrlrange="-0.35 0.35" forcerange="-1.8 1.8" />
+    <position name="right_ring_mcp_flexion_act"   joint="right_ring_mcp_flexion"   kp="3.5" kv="0.20" ctrlrange="-0.20 1.60" forcerange="-2.5 2.5" />
+    <position name="right_ring_pip_flexion_act"   joint="right_ring_pip_flexion"   kp="2.8" kv="0.15" ctrlrange="0.0 1.75"  forcerange="-2.0 2.0" />
+    <position name="right_ring_dip_flexion_act"   joint="right_ring_dip_flexion"   kp="2.0" kv="0.12" ctrlrange="0.0 1.40"  forcerange="-1.5 1.5" />
+    <position name="right_pinky_mcp_abduction_act" joint="right_pinky_mcp_abduction" kp="2.5" kv="0.15" ctrlrange="-0.35 0.35" forcerange="-1.8 1.8" />
+    <position name="right_pinky_mcp_flexion_act"   joint="right_pinky_mcp_flexion"   kp="3.5" kv="0.20" ctrlrange="-0.20 1.60" forcerange="-2.5 2.5" />
+    <position name="right_pinky_pip_flexion_act"   joint="right_pinky_pip_flexion"   kp="2.8" kv="0.15" ctrlrange="0.0 1.75"  forcerange="-2.0 2.0" />
+    <position name="right_pinky_dip_flexion_act"   joint="right_pinky_dip_flexion"   kp="2.0" kv="0.12" ctrlrange="0.0 1.40"  forcerange="-1.5 1.5" />
+
+    <!-- ==================== LEFT 7-DOF ARM ==================== -->
+    <position name="left_shoulder_pitch_act" joint="left_shoulder_pitch" kp="120" kv="12" ctrlrange="-2.80 2.00" forcerange="-60 60" />
+    <position name="left_shoulder_roll_act"  joint="left_shoulder_roll"  kp="120" kv="12" ctrlrange="-0.55 2.25" forcerange="-60 60" />
+    <position name="left_shoulder_yaw_act"   joint="left_shoulder_yaw"   kp="80"  kv="8"  ctrlrange="-2.60 2.60" forcerange="-40 40" />
+    <position name="left_elbow_pitch_act"    joint="left_elbow_pitch"    kp="90"  kv="9"  ctrlrange="-0.40 2.35" forcerange="-45 45" />
+    <position name="left_wrist_yaw_act"      joint="left_wrist_yaw"      kp="30"  kv="3"  ctrlrange="-2.60 2.60" forcerange="-18 18" />
+    <position name="left_wrist_pitch_act"    joint="left_wrist_pitch"    kp="25"  kv="2.5" ctrlrange="-1.20 1.20" forcerange="-12 12" />
+    <position name="left_wrist_roll_act"     joint="left_wrist_roll"     kp="25"  kv="2.5" ctrlrange="-0.85 0.85" forcerange="-12 12" />
+
+    <!-- ==================== LEFT 21-DOF DEXTEROUS HAND ==================== -->
+    <position name="left_thumb_cmc_abduction_act" joint="left_thumb_cmc_abduction" kp="4.0" kv="0.25" ctrlrange="-0.6 0.9"   forcerange="-3 3" />
+    <position name="left_thumb_cmc_flexion_act"   joint="left_thumb_cmc_flexion"   kp="4.0" kv="0.25" ctrlrange="-0.4 1.2"   forcerange="-3 3" />
+    <position name="left_thumb_mcp_abduction_act" joint="left_thumb_mcp_abduction" kp="3.0" kv="0.20" ctrlrange="-0.35 0.35" forcerange="-2 2" />
+    <position name="left_thumb_mcp_flexion_act"   joint="left_thumb_mcp_flexion"   kp="3.5" kv="0.20" ctrlrange="-0.15 1.40" forcerange="-2.5 2.5" />
+    <position name="left_thumb_ip_flexion_act"    joint="left_thumb_ip_flexion"    kp="2.5" kv="0.15" ctrlrange="-0.15 1.55" forcerange="-2 2" />
+    <position name="left_index_mcp_abduction_act" joint="left_index_mcp_abduction" kp="2.5" kv="0.15" ctrlrange="-0.35 0.35" forcerange="-1.8 1.8" />
+    <position name="left_index_mcp_flexion_act"   joint="left_index_mcp_flexion"   kp="3.5" kv="0.20" ctrlrange="-0.20 1.60" forcerange="-2.5 2.5" />
+    <position name="left_index_pip_flexion_act"   joint="left_index_pip_flexion"   kp="2.8" kv="0.15" ctrlrange="0.0 1.75"  forcerange="-2.0 2.0" />
+    <position name="left_index_dip_flexion_act"   joint="left_index_dip_flexion"   kp="2.0" kv="0.12" ctrlrange="0.0 1.40"  forcerange="-1.5 1.5" />
+    <position name="left_middle_mcp_abduction_act" joint="left_middle_mcp_abduction" kp="2.5" kv="0.15" ctrlrange="-0.35 0.35" forcerange="-1.8 1.8" />
+    <position name="left_middle_mcp_flexion_act"   joint="left_middle_mcp_flexion"   kp="3.5" kv="0.20" ctrlrange="-0.20 1.60" forcerange="-2.5 2.5" />
+    <position name="left_middle_pip_flexion_act"   joint="left_middle_pip_flexion"   kp="2.8" kv="0.15" ctrlrange="0.0 1.75"  forcerange="-2.0 2.0" />
+    <position name="left_middle_dip_flexion_act"   joint="left_middle_dip_flexion"   kp="2.0" kv="0.12" ctrlrange="0.0 1.40"  forcerange="-1.5 1.5" />
+    <position name="left_ring_mcp_abduction_act" joint="left_ring_mcp_abduction" kp="2.5" kv="0.15" ctrlrange="-0.35 0.35" forcerange="-1.8 1.8" />
+    <position name="left_ring_mcp_flexion_act"   joint="left_ring_mcp_flexion"   kp="3.5" kv="0.20" ctrlrange="-0.20 1.60" forcerange="-2.5 2.5" />
+    <position name="left_ring_pip_flexion_act"   joint="left_ring_pip_flexion"   kp="2.8" kv="0.15" ctrlrange="0.0 1.75"  forcerange="-2.0 2.0" />
+    <position name="left_ring_dip_flexion_act"   joint="left_ring_dip_flexion"   kp="2.0" kv="0.12" ctrlrange="0.0 1.40"  forcerange="-1.5 1.5" />
+    <position name="left_pinky_mcp_abduction_act" joint="left_pinky_mcp_abduction" kp="2.5" kv="0.15" ctrlrange="-0.35 0.35" forcerange="-1.8 1.8" />
+    <position name="left_pinky_mcp_flexion_act"   joint="left_pinky_mcp_flexion"   kp="3.5" kv="0.20" ctrlrange="-0.20 1.60" forcerange="-2.5 2.5" />
+    <position name="left_pinky_pip_flexion_act"   joint="left_pinky_pip_flexion"   kp="2.8" kv="0.15" ctrlrange="0.0 1.75"  forcerange="-2.0 2.0" />
+    <position name="left_pinky_dip_flexion_act"   joint="left_pinky_dip_flexion"   kp="2.0" kv="0.12" ctrlrange="0.0 1.40"  forcerange="-1.5 1.5" />
+  </actuator>
+
+  <tendon>
+    <spatial name="right_thumb_flexor_tendon" group="4" width="0.0010" rgba="0.3 0.3 0.3 0.0">
+      <site site="right_forearm_tendon_origin" />
+      <site site="right_carpal_tunnel_site" />
+      <site site="right_thumb_cmc_site" />
+      <site site="right_thumb_tip" />
+    </spatial>
+    <spatial name="right_index_flexor_tendon" group="4" width="0.0010" rgba="0.3 0.3 0.3 0.0">
+      <site site="right_forearm_tendon_origin" />
+      <site site="right_carpal_tunnel_site" />
+      <site site="right_index_mcp_site" />
+      <site site="right_index_pip_site" />
+      <site site="right_index_tip" />
+    </spatial>
+    <spatial name="right_middle_flexor_tendon" group="4" width="0.0010" rgba="0.3 0.3 0.3 0.0">
+      <site site="right_forearm_tendon_origin" />
+      <site site="right_carpal_tunnel_site" />
+      <site site="right_middle_mcp_site" />
+      <site site="right_middle_pip_site" />
+      <site site="right_middle_tip" />
+    </spatial>
+    <spatial name="right_ring_flexor_tendon" group="4" width="0.0010" rgba="0.3 0.3 0.3 0.0">
+      <site site="right_forearm_tendon_origin" />
+      <site site="right_carpal_tunnel_site" />
+      <site site="right_ring_mcp_site" />
+      <site site="right_ring_pip_site" />
+      <site site="right_ring_tip" />
+    </spatial>
+    <spatial name="right_pinky_flexor_tendon" group="4" width="0.0010" rgba="0.3 0.3 0.3 0.0">
+      <site site="right_forearm_tendon_origin" />
+      <site site="right_carpal_tunnel_site" />
+      <site site="right_pinky_mcp_site" />
+      <site site="right_pinky_pip_site" />
+      <site site="right_pinky_tip" />
+    </spatial>
+    <spatial name="right_leg_power_harness" group="4" width="0.0015" rgba="0.3 0.3 0.3 0.0">
+      <site site="right_pelvis_bus_site" />
+      <site site="right_hip_harness_site" />
+      <site site="right_thigh_harness_site" />
+      <site site="right_shin_harness_site" />
+      <site site="right_ankle_ft_site" />
+    </spatial>
+    <spatial name="left_thumb_flexor_tendon" group="4" width="0.0010" rgba="0.3 0.3 0.3 0.0">
+      <site site="left_forearm_tendon_origin" />
+      <site site="left_carpal_tunnel_site" />
+      <site site="left_thumb_cmc_site" />
+      <site site="left_thumb_tip" />
+    </spatial>
+    <spatial name="left_index_flexor_tendon" group="4" width="0.0010" rgba="0.3 0.3 0.3 0.0">
+      <site site="left_forearm_tendon_origin" />
+      <site site="left_carpal_tunnel_site" />
+      <site site="left_index_mcp_site" />
+      <site site="left_index_pip_site" />
+      <site site="left_index_tip" />
+    </spatial>
+    <spatial name="left_middle_flexor_tendon" group="4" width="0.0010" rgba="0.3 0.3 0.3 0.0">
+      <site site="left_forearm_tendon_origin" />
+      <site site="left_carpal_tunnel_site" />
+      <site site="left_middle_mcp_site" />
+      <site site="left_middle_pip_site" />
+      <site site="left_middle_tip" />
+    </spatial>
+    <spatial name="left_ring_flexor_tendon" group="4" width="0.0010" rgba="0.3 0.3 0.3 0.0">
+      <site site="left_forearm_tendon_origin" />
+      <site site="left_carpal_tunnel_site" />
+      <site site="left_ring_mcp_site" />
+      <site site="left_ring_pip_site" />
+      <site site="left_ring_tip" />
+    </spatial>
+    <spatial name="left_pinky_flexor_tendon" group="4" width="0.0010" rgba="0.3 0.3 0.3 0.0">
+      <site site="left_forearm_tendon_origin" />
+      <site site="left_carpal_tunnel_site" />
+      <site site="left_pinky_mcp_site" />
+      <site site="left_pinky_pip_site" />
+      <site site="left_pinky_tip" />
+    </spatial>
+    <spatial name="left_leg_power_harness" group="4" width="0.0015" rgba="0.3 0.3 0.3 0.0">
+      <site site="left_pelvis_bus_site" />
+      <site site="left_hip_harness_site" />
+      <site site="left_thigh_harness_site" />
+      <site site="left_shin_harness_site" />
+      <site site="left_ankle_ft_site" />
+    </spatial>
+  </tendon>
+
+  <sensor>
+    <!-- 1. Dual 6-Axis IMUs (Torso Primary IMU + Pelvis Root IMU) -->
+    <accelerometer name="torso_imu_acc"   site="torso_imu_site" />
+    <gyro          name="torso_imu_gyro"  site="torso_imu_site" />
+    <framequat     name="torso_imu_quat"  objtype="site" objname="torso_imu_site" />
+    <accelerometer name="pelvis_imu_acc"  site="pelvis_imu_site" />
+    <gyro          name="pelvis_imu_gyro" site="pelvis_imu_site" />
+
+    <!-- 2. 6-Axis Ankle Force/Torque Load Cells (Left & Right) -->
+    <force  name="right_ankle_force"  site="right_ankle_ft_site" />
+    <torque name="right_ankle_torque" site="right_ankle_ft_site" />
+    <force  name="left_ankle_force"   site="left_ankle_ft_site" />
+    <torque name="left_ankle_torque"  site="left_ankle_ft_site" />
+
+    <!-- 3. 6-Axis Wrist Force/Torque Load Cells (Left & Right) -->
+    <force  name="right_wrist_force"  site="right_wrist_ft_site" />
+    <torque name="right_wrist_torque" site="right_wrist_ft_site" />
+    <force  name="left_wrist_force"   site="left_wrist_ft_site" />
+    <torque name="left_wrist_torque"  site="left_wrist_ft_site" />
+
+    <!-- 4. 8-Channel Plantar Foot Pressure FSR Array (4 per Foot) -->
+    <touch name="right_fsr_heel_med" site="right_heel_med_site" />
+    <touch name="right_fsr_heel_lat" site="right_heel_lat_site" />
+    <touch name="right_fsr_meta_med" site="right_meta_med_site" />
+    <touch name="right_fsr_meta_lat" site="right_meta_lat_site" />
+    <touch name="left_fsr_heel_med"  site="left_heel_med_site" />
+    <touch name="left_fsr_heel_lat"  site="left_heel_lat_site" />
+    <touch name="left_fsr_meta_med"  site="left_meta_med_site" />
+    <touch name="left_fsr_meta_lat"  site="left_meta_lat_site" />
+
+    <!-- 5. 12-Channel Dexterous Hand Tactile Touch Array (5 Fingertips + Palm per Hand) -->
+    <touch name="right_thumb_touch"  site="right_thumb_tip" />
+    <touch name="right_index_touch"  site="right_index_tip" />
+    <touch name="right_middle_touch" site="right_middle_tip" />
+    <touch name="right_ring_touch"   site="right_ring_tip" />
+    <touch name="right_pinky_touch"  site="right_pinky_tip" />
+    <touch name="right_palm_touch"   site="right_palm" />
+    <touch name="left_thumb_touch"   site="left_thumb_tip" />
+    <touch name="left_index_touch"   site="left_index_tip" />
+    <touch name="left_middle_touch"  site="left_middle_tip" />
+    <touch name="left_ring_touch"    site="left_ring_tip" />
+    <touch name="left_pinky_touch"   site="left_pinky_tip" />
+    <touch name="left_palm_touch"    site="left_palm" />
+
+    <!-- 6. Head Crown 3D Spatial Tracker (No yellow laser beam in viewer!) -->
+    <framepos name="head_mid360_lidar" objtype="site" objname="lidar_site" />
+  </sensor>
+
+  <contact>
+    <exclude body1="pelvis" body2="torso_lower" />
+    <exclude body1="torso_lower" body2="torso_upper" />
+    <exclude body1="torso_upper" body2="neck" />
+    <exclude body1="neck" body2="head" />
+    <exclude body1="head" body2="left_eye" />
+    <exclude body1="head" body2="right_eye" />
+    <exclude body1="head" body2="left_eyelid" />
+    <exclude body1="head" body2="right_eyelid" />
+    <exclude body1="head" body2="jaw" />
+
+    <exclude body1="torso_upper" body2="right_shoulder" />
+    <exclude body1="torso_upper" body2="right_upper_arm" />
+    <exclude body1="right_shoulder" body2="right_upper_arm" />
+    <exclude body1="right_upper_arm" body2="right_forearm" />
+    <exclude body1="right_forearm" body2="right_wrist_pitch_link" />
+    <exclude body1="right_wrist_pitch_link" body2="right_hand" />
+
+    <exclude body1="torso_upper" body2="left_shoulder" />
+    <exclude body1="torso_upper" body2="left_upper_arm" />
+    <exclude body1="left_shoulder" body2="left_upper_arm" />
+    <exclude body1="left_upper_arm" body2="left_forearm" />
+    <exclude body1="left_forearm" body2="left_wrist_pitch_link" />
+    <exclude body1="left_wrist_pitch_link" body2="left_hand" />
+
+    <exclude body1="pelvis" body2="right_hip" />
+    <exclude body1="pelvis" body2="right_thigh" />
+    <exclude body1="right_hip" body2="right_thigh" />
+    <exclude body1="right_thigh" body2="right_shin" />
+    <exclude body1="right_shin" body2="right_foot" />
+
+    <exclude body1="pelvis" body2="left_hip" />
+    <exclude body1="pelvis" body2="left_thigh" />
+    <exclude body1="left_hip" body2="left_thigh" />
+    <exclude body1="left_thigh" body2="left_shin" />
+    <exclude body1="left_shin" body2="left_foot" />
+  </contact>
+</mujoco>

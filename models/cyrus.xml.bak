@@ -1,0 +1,536 @@
+<mujoco model="cyrus">
+  <compiler angle="radian" coordinate="local"/>
+  <option timestep="0.002" gravity="0 0 -9.80665" density="1.204" viscosity="0.0000181" integrator="implicitfast" iterations="50" ls_iterations="10"/>
+
+  <default>
+    <joint damping="1.5" armature="0.02"/>
+    <geom friction="1.2 0.005 0.0001"/>
+  </default>
+
+  <visual>
+    <headlight ambient="0.45 0.45 0.48" diffuse="0.8 0.8 0.85" specular="0.25 0.25 0.25"/>
+    <rgba haze="0.15 0.2 0.3 1"/>
+    <global azimuth="135" elevation="-20"/>
+  </visual>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.2 0.35 0.5" rgb2="0.05 0.08 0.12" width="512" height="512"/>
+    <texture name="grid" type="2d" builtin="checker" rgb1="0.12 0.14 0.18" rgb2="0.18 0.22 0.28" width="512" height="512"/>
+    <material name="grid" texture="grid" texrepeat="2 2" texuniform="true" reflectance="0.15"/>
+
+    <!-- High-Fidelity IRL Hardware Materials (CNC 6061-T6 Aluminum, 3K Carbon Tube, QDD Servos) -->
+    <material name="armor_white" rgba="0.95 0.96 0.98 1" reflectance="0.5" shininess="0.9"/>
+    <material name="carbon_frame" rgba="0.12 0.13 0.15 1" reflectance="0.2" shininess="0.4"/>
+    <material name="joint_metal" rgba="0.45 0.48 0.52 1" reflectance="0.6" shininess="0.95"/>
+    <material name="chrome_trim" rgba="0.8 0.82 0.85 1" reflectance="0.8" shininess="1.0"/>
+    <material name="servo_copper" rgba="0.82 0.48 0.18 1" reflectance="0.6" shininess="0.85"/>
+    <material name="anodized_gold" rgba="0.88 0.72 0.22 1" reflectance="0.7" shininess="0.9"/>
+    <material name="visor_cyan" rgba="0.05 0.85 0.95 0.95" emission="0.85" reflectance="0.9"/>
+    <material name="core_glow" rgba="0.1 0.6 1.0 1" emission="0.9" reflectance="0.8"/>
+    <material name="accent_blue" rgba="0.12 0.4 0.85 1" reflectance="0.3"/>
+    <material name="sole_rubber" rgba="0.08 0.08 0.09 1" reflectance="0.05"/>
+    <material name="finger_pad" rgba="0.15 0.15 0.17 1" reflectance="0.1"/>
+    <material name="target_glow" rgba="1.0 0.3 0.2 0.7" emission="0.6"/>
+  </asset>
+
+  <worldbody>
+    <geom name="floor" type="plane" size="10 10 0.1" material="grid" friction="1.1 0.005 0.0001" condim="6" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2"/>
+    <light directional="true" pos="0 0 4" dir="0 0 -1"/>
+    <light directional="false" pos="2 2 3" dir="-1 -1 -1"/>
+
+    <!-- Movable Gaze Target -->
+    <body name="gaze_target" pos="1.2 0.0 1.5" mocap="true">
+      <geom type="sphere" size="0.04" material="target_glow" contype="0" conaffinity="0"/>
+    </body>
+
+    <!-- ================= CYRUS ROOT (PELVIS — CNC 6061-T6 CHASSIS) ================= -->
+    <body name="pelvis" pos="0 0 0.84">
+      <freejoint name="root"/>
+      <!-- Pelvis structural core -->
+      <geom name="pelvis_geom" type="box" size="0.10 0.12 0.07" material="carbon_frame" density="900"/>
+      <!-- Pelvic front armor plate -->
+      <geom type="box" size="0.03 0.10 0.06" pos="0.09 0 0.01" material="armor_white" contype="0" conaffinity="0"/>
+      <!-- Left & right hip joint housings -->
+      <geom type="sphere" size="0.06" pos="0 -0.11 -0.04" material="joint_metal" contype="0" conaffinity="0"/>
+      <geom type="sphere" size="0.06" pos="0 0.11 -0.04" material="joint_metal" contype="0" conaffinity="0"/>
+      <!-- IRL CNC Billet Rear Subframe & Hip Yaw QDD Pancake Motor Stators (mass="0" for 100% inertial identity) -->
+      <geom type="box" size="0.025 0.09 0.05" pos="-0.09 0 0.01" material="joint_metal" contype="0" conaffinity="0" mass="0"/>
+      <geom type="cylinder" size="0.052 0.022" pos="0 -0.11 -0.025" zaxis="0 0 1" material="joint_metal" contype="0" conaffinity="0" mass="0"/>
+      <geom type="cylinder" size="0.052 0.022" pos="0 0.11 -0.025" zaxis="0 0 1" material="joint_metal" contype="0" conaffinity="0" mass="0"/>
+      <geom type="cylinder" size="0.042 0.024" pos="0 -0.11 -0.025" zaxis="0 0 1" material="anodized_gold" contype="0" conaffinity="0" mass="0"/>
+      <geom type="cylinder" size="0.042 0.024" pos="0 0.11 -0.025" zaxis="0 0 1" material="anodized_gold" contype="0" conaffinity="0" mass="0"/>
+
+      <!-- ================= SPINE & TORSO (3-DOF WAIST + BATTERY BAY) ================= -->
+      <body name="torso_lower" pos="0 0 0.10">
+        <joint name="waist_yaw" type="hinge" axis="0 0 1" range="-0.8 0.8" damping="2.0"/>
+        <joint name="waist_roll" type="hinge" axis="1 0 0" range="-0.4 0.4" damping="2.0"/>
+        
+        <!-- Lumbar spine column -->
+        <geom type="cylinder" size="0.06 0.05" material="carbon_frame" density="800"/>
+        <!-- Segmented spinal vertebrae discs -->
+        <geom type="cylinder" size="0.065 0.01" pos="0 0 -0.03" material="joint_metal" contype="0" conaffinity="0"/>
+        <geom type="cylinder" size="0.065 0.01" pos="0 0 0.0" material="chrome_trim" contype="0" conaffinity="0"/>
+        <geom type="cylinder" size="0.065 0.01" pos="0 0 0.03" material="joint_metal" contype="0" conaffinity="0"/>
+        <!-- IRL Waist Roll QDD Stator & Dual Linear Strut Linkage Guides (mass="0") -->
+        <geom type="cylinder" size="0.055 0.018" pos="0 0 0.0" zaxis="1 0 0" material="anodized_gold" contype="0" conaffinity="0" mass="0"/>
+        <geom type="capsule" fromto="-0.04 -0.075 -0.04 -0.04 -0.075 0.05" size="0.008" material="chrome_trim" contype="0" conaffinity="0" mass="0"/>
+        <geom type="capsule" fromto="-0.04 0.075 -0.04 -0.04 0.075 0.05" size="0.008" material="chrome_trim" contype="0" conaffinity="0" mass="0"/>
+        <!-- Abdominal oblique flank plates -->
+        <geom type="box" size="0.07 0.02 0.04" pos="0 -0.09 0" material="armor_white" contype="0" conaffinity="0"/>
+        <geom type="box" size="0.07 0.02 0.04" pos="0 0.09 0" material="armor_white" contype="0" conaffinity="0"/>
+
+        <body name="torso_upper" pos="0 0 0.14">
+          <joint name="waist_pitch" type="hinge" axis="0 1 0" range="-0.5 0.7" damping="3.0"/>
+          
+          <!-- Chest inner core -->
+          <geom type="box" size="0.10 0.14 0.13" material="carbon_frame" density="950"/>
+          <!-- IRL Waist Pitch QDD Actuator Drum & Rear 48V LiPo Battery Enclosure (mass="0") -->
+          <geom type="cylinder" size="0.048 0.065" pos="0 0 -0.11" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0"/>
+          <geom type="cylinder" size="0.036 0.068" pos="0 0 -0.11" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0"/>
+          <geom type="box" size="0.035 0.11 0.10" pos="-0.11 0 0.02" material="joint_metal" contype="0" conaffinity="0" mass="0"/>
+          <geom type="box" size="0.012 0.08 0.07" pos="-0.142 0 0.02" material="armor_white" contype="0" conaffinity="0" mass="0"/>
+          
+          <!-- Dual Pectoral Armor Plates (Left & Right sculpted chest) -->
+          <geom type="box" size="0.03 0.07 0.06" pos="0.10 -0.07 0.06" material="armor_white" contype="0" conaffinity="0"/>
+          <geom type="box" size="0.03 0.07 0.06" pos="0.10 0.07 0.06" material="armor_white" contype="0" conaffinity="0"/>
+          <!-- Sternum central groove -->
+          <geom type="box" size="0.025 0.01 0.10" pos="0.105 0 0.03" material="carbon_frame" contype="0" conaffinity="0"/>
+
+          <!-- Glowing Arc Reactor Energy Core -->
+          <geom type="cylinder" size="0.04 0.015" pos="0.12 0 0.03" zaxis="1 0 0" material="core_glow" contype="0" conaffinity="0"/>
+          <geom type="cylinder" size="0.045 0.005" pos="0.122 0 0.03" zaxis="1 0 0" material="chrome_trim" contype="0" conaffinity="0"/>
+
+          <!-- Clavicles (Collarbones) -->
+          <geom type="capsule" fromto="0.08 -0.03 0.12 0.04 -0.16 0.12" size="0.015" material="chrome_trim" contype="0" conaffinity="0"/>
+          <geom type="capsule" fromto="0.08 0.03 0.12 0.04 0.16 0.12" size="0.015" material="chrome_trim" contype="0" conaffinity="0"/>
+
+          <!-- Ribcage lateral armor slats -->
+          <geom type="box" size="0.08 0.02 0.015" pos="0.02 -0.13 -0.04" material="armor_white" contype="0" conaffinity="0"/>
+          <geom type="box" size="0.08 0.02 0.015" pos="0.02 0.13 -0.04" material="armor_white" contype="0" conaffinity="0"/>
+          <site name="torso_com" pos="0 0 0.05" size="0.01"/>
+
+          <!-- ================= HEAD & NECK ================= -->
+          <body name="neck" pos="0 0 0.18">
+            <joint name="neck_yaw" type="hinge" axis="0 0 1" range="-1.4 1.4" damping="0.8"/>
+            <joint name="neck_pitch" type="hinge" axis="0 1 0" range="-0.7 0.7" damping="0.8"/>
+            <!-- Neck column & dual mechanical actuator struts -->
+            <geom type="cylinder" size="0.035 0.04" material="carbon_frame" density="600"/>
+            <geom type="cylinder" size="0.012 0.038" pos="0.02 -0.03 0" material="chrome_trim" contype="0" conaffinity="0"/>
+            <geom type="cylinder" size="0.012 0.038" pos="0.02 0.03 0" material="chrome_trim" contype="0" conaffinity="0"/>
+
+            <body name="head" pos="0 0 0.08">
+              <!-- Sculpted Cranial Dome -->
+              <geom type="ellipsoid" size="0.09 0.08 0.09" material="armor_white" density="700"/>
+              <!-- Angled Jawline & Chin Guard -->
+              <geom type="box" size="0.05 0.045 0.03" pos="0.06 0 -0.04" material="carbon_frame" contype="0" conaffinity="0"/>
+              <geom type="box" size="0.02 0.025 0.02" pos="0.09 0 -0.045" material="chrome_trim" contype="0" conaffinity="0"/>
+              
+              <!-- Sleek Panoramic Wrap-Around Visor -->
+              <geom type="box" size="0.035 0.07 0.028" pos="0.078 0 0.01" material="visor_cyan" contype="0" conaffinity="0"/>
+              <geom type="cylinder" size="0.03 0.005" pos="0.09 0 0.01" zaxis="1 0 0" material="chrome_trim" contype="0" conaffinity="0"/>
+
+              <!-- Temporal Side Audio / Sensor Pods -->
+              <geom type="cylinder" size="0.025 0.01" pos="0 -0.085 0.01" zaxis="0 1 0" material="carbon_frame" contype="0" conaffinity="0"/>
+              <geom type="cylinder" size="0.025 0.01" pos="0 0.085 0.01" zaxis="0 1 0" material="carbon_frame" contype="0" conaffinity="0"/>
+              <geom type="sphere" size="0.012" pos="0 -0.095 0.01" material="visor_cyan" contype="0" conaffinity="0"/>
+              <geom type="sphere" size="0.012" pos="0 0.095 0.01" material="visor_cyan" contype="0" conaffinity="0"/>
+
+              <site name="eyes" pos="0.10 0 0.01" size="0.01"/>
+              <site name="head_top" pos="0 0 0.09" size="0.01"/>
+            </body>
+          </body>
+
+          <!-- ================= RIGHT ARM (DETAILED 5-FINGER HAND) ================= -->
+          <body name="right_shoulder" pos="0 -0.19 0.10">
+            <joint name="right_shoulder_pitch" type="hinge" axis="0 1 0" range="-2.2 1.5" damping="1.5"/>
+            <joint name="right_shoulder_roll" type="hinge" axis="1 0 0" range="-1.8 0.5" damping="1.5"/>
+            <joint name="right_shoulder_yaw" type="hinge" axis="0 0 1" range="-1.5 1.5" damping="1.2"/>
+            
+            <!-- Shoulder spherical core -->
+            <geom type="sphere" size="0.048" material="joint_metal" density="800"/>
+            <!-- IRL Orthogonal Pitch & Roll QDD Servo Cans (mass="0") -->
+            <geom type="cylinder" size="0.044 0.022" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0"/>
+            <geom type="cylinder" size="0.036 0.024" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0"/>
+            <geom type="cylinder" size="0.040 0.020" pos="0 -0.025 -0.03" zaxis="1 0 0" material="joint_metal" contype="0" conaffinity="0" mass="0"/>
+            <!-- Deltoid armor cap -->
+            <geom type="ellipsoid" size="0.06 0.05 0.035" pos="0 -0.02 0.02" material="armor_white" contype="0" conaffinity="0"/>
+
+            <body name="right_upper_arm" pos="0 -0.04 -0.12">
+              <geom type="capsule" fromto="0 0 0.07 0 0 -0.11" size="0.035" material="carbon_frame" density="850"/>
+              <!-- IRL Carbon Tube Collar Clamps (mass="0") -->
+              <geom type="cylinder" size="0.039 0.012" pos="0 0 0.05" material="chrome_trim" contype="0" conaffinity="0" mass="0"/>
+              <geom type="cylinder" size="0.039 0.012" pos="0 0 -0.10" material="chrome_trim" contype="0" conaffinity="0" mass="0"/>
+              <!-- Bicep contour plate -->
+              <geom type="capsule" fromto="0.015 0 0.05 0.015 0 -0.07" size="0.025" material="armor_white" contype="0" conaffinity="0"/>
+              <!-- Tricep contour plate -->
+              <geom type="capsule" fromto="-0.015 0 0.05 -0.015 0 -0.07" size="0.025" material="carbon_frame" contype="0" conaffinity="0"/>
+
+              <body name="right_forearm" pos="0 0 -0.15">
+                <joint name="right_elbow" type="hinge" axis="0 1 0" range="-2.2 0.0" damping="1.2"/>
+                
+                <!-- Elbow hinge bracket -->
+                <geom type="cylinder" size="0.03 0.025" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0"/>
+                <geom type="cylinder" size="0.026 0.030" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0"/>
+                <!-- Elbow olecranon guard cap -->
+                <geom type="box" size="0.02 0.025 0.02" pos="-0.025 0 0" material="armor_white" contype="0" conaffinity="0"/>
+
+                <!-- Forearm structural bone -->
+                <geom type="capsule" fromto="0 0 0 0 0 -0.16" size="0.028" material="carbon_frame" density="800"/>
+                <!-- Forearm dorsal and ventral armor plating -->
+                <geom type="box" size="0.02 0.03 0.07" pos="0.015 0 -0.08" material="armor_white" contype="0" conaffinity="0"/>
+                <geom type="box" size="0.01 0.025 0.06" pos="-0.018 0 -0.08" material="joint_metal" contype="0" conaffinity="0"/>
+
+                <!-- Wrist gimbal ring -->
+                <geom type="cylinder" size="0.026 0.012" pos="0 0 -0.17" material="chrome_trim" contype="0" conaffinity="0"/>
+
+                <!-- ================= RIGHT HAND (5 ARTICULATED FINGERS) ================= -->
+                <body name="right_hand" pos="0 0 -0.21">
+                  <joint name="right_wrist" type="hinge" axis="1 0 0" range="-1.0 1.0" damping="0.5"/>
+                  <!-- Palm Core with Active High-Traction Ground Contact -->
+                  <geom name="right_palm_core" type="box" size="0.015 0.032 0.035" material="carbon_frame" density="700" friction="1.5 0.005 0.0001"/>
+                  <!-- Dorsal Hand Armor Shield -->
+                  <geom type="box" size="0.008 0.03 0.03" pos="0.016 0 0" material="armor_white" contype="0" conaffinity="0"/>
+                  <site name="right_palm" pos="0 0 -0.03" size="0.01"/>
+
+                  <!-- Articulated Right Thumb (Opposable Pitch & Press) -->
+                  <body name="right_thumb" pos="0 0.025 0.01">
+                    <joint name="right_thumb_pitch" type="hinge" axis="0 1 0" range="-0.4 1.2" damping="0.2"/>
+                    <geom type="capsule" fromto="0 0 0 0.015 0.020 -0.020" size="0.007" material="joint_metal" density="400"/>
+                    <geom name="right_thumb_pad" type="capsule" fromto="0.015 0.020 -0.020 0.025 0.030 -0.035" size="0.006" material="finger_pad" friction="1.8 0.005 0.0001"/>
+                    <site name="right_thumb_tip" pos="0.025 0.030 -0.035" size="0.005"/>
+                  </body>
+
+                  <!-- Articulated Right Fingers (Grip & Floor Press Flexion) -->
+                  <body name="right_fingers" pos="0.008 0 -0.035">
+                    <joint name="right_finger_pitch" type="hinge" axis="0 1 0" range="-0.4 1.4" damping="0.2"/>
+                    <!-- Index Finger -->
+                    <geom type="capsule" fromto="0 0.022 0 0 0.022 -0.030" size="0.006" material="joint_metal" density="400"/>
+                    <geom name="right_index_pad" type="capsule" fromto="0 0.022 -0.030 -0.003 0.022 -0.050" size="0.005" material="finger_pad" friction="1.8 0.005 0.0001"/>
+                    <!-- Middle Finger -->
+                    <geom type="capsule" fromto="0 0.007 0 0 0.007 -0.035" size="0.006" material="joint_metal" density="400"/>
+                    <geom name="right_middle_pad" type="capsule" fromto="0 0.007 -0.035 -0.003 0.007 -0.057" size="0.005" material="finger_pad" friction="1.8 0.005 0.0001"/>
+                    <!-- Ring Finger -->
+                    <geom type="capsule" fromto="0 -0.008 0 0 -0.008 -0.030" size="0.006" material="joint_metal" density="400"/>
+                    <geom name="right_ring_pad" type="capsule" fromto="0 -0.008 -0.030 -0.003 -0.008 -0.050" size="0.005" material="finger_pad" friction="1.8 0.005 0.0001"/>
+                    <!-- Pinky Finger -->
+                    <geom type="capsule" fromto="0 -0.022 0 0 -0.022 -0.023" size="0.0055" material="joint_metal" density="400"/>
+                    <geom name="right_pinky_pad" type="capsule" fromto="0 -0.022 -0.023 -0.003 -0.022 -0.040" size="0.005" material="finger_pad" friction="1.8 0.005 0.0001"/>
+                    <site name="right_fingertips" pos="0 0 -0.050" size="0.005"/>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+
+          <!-- ================= LEFT ARM (DETAILED 5-FINGER HAND) ================= -->
+          <body name="left_shoulder" pos="0 0.19 0.10">
+            <joint name="left_shoulder_pitch" type="hinge" axis="0 1 0" range="-2.2 1.5" damping="1.5"/>
+            <joint name="left_shoulder_roll" type="hinge" axis="1 0 0" range="-0.5 1.8" damping="1.5"/>
+            <joint name="left_shoulder_yaw" type="hinge" axis="0 0 1" range="-1.5 1.5" damping="1.2"/>
+            
+            <!-- Shoulder spherical core -->
+            <geom type="sphere" size="0.048" material="joint_metal" density="800"/>
+            <!-- IRL Orthogonal Pitch & Roll QDD Servo Cans (mass="0") -->
+            <geom type="cylinder" size="0.044 0.022" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0"/>
+            <geom type="cylinder" size="0.036 0.024" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0"/>
+            <geom type="cylinder" size="0.040 0.020" pos="0 0.025 -0.03" zaxis="1 0 0" material="joint_metal" contype="0" conaffinity="0" mass="0"/>
+            <!-- Deltoid armor cap -->
+            <geom type="ellipsoid" size="0.06 0.05 0.035" pos="0 0.02 0.02" material="armor_white" contype="0" conaffinity="0"/>
+
+            <body name="left_upper_arm" pos="0 0.04 -0.12">
+              <geom type="capsule" fromto="0 0 0.07 0 0 -0.11" size="0.035" material="carbon_frame" density="850"/>
+              <!-- IRL Carbon Tube Collar Clamps (mass="0") -->
+              <geom type="cylinder" size="0.039 0.012" pos="0 0 0.05" material="chrome_trim" contype="0" conaffinity="0" mass="0"/>
+              <geom type="cylinder" size="0.039 0.012" pos="0 0 -0.10" material="chrome_trim" contype="0" conaffinity="0" mass="0"/>
+              <!-- Bicep contour plate -->
+              <geom type="capsule" fromto="0.015 0 0.05 0.015 0 -0.07" size="0.025" material="armor_white" contype="0" conaffinity="0"/>
+              <!-- Tricep contour plate -->
+              <geom type="capsule" fromto="-0.015 0 0.05 -0.015 0 -0.07" size="0.025" material="carbon_frame" contype="0" conaffinity="0"/>
+
+              <body name="left_forearm" pos="0 0 -0.15">
+                <joint name="left_elbow" type="hinge" axis="0 1 0" range="-2.2 0.0" damping="1.2"/>
+                
+                <!-- Elbow hinge bracket -->
+                <geom type="cylinder" size="0.03 0.025" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0"/>
+                <geom type="cylinder" size="0.026 0.030" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0"/>
+                <!-- Elbow olecranon guard cap -->
+                <geom type="box" size="0.02 0.025 0.02" pos="-0.025 0 0" material="armor_white" contype="0" conaffinity="0"/>
+
+                <!-- Forearm structural bone -->
+                <geom type="capsule" fromto="0 0 0 0 0 -0.16" size="0.028" material="carbon_frame" density="800"/>
+                <!-- Forearm dorsal and ventral armor plating -->
+                <geom type="box" size="0.02 0.03 0.07" pos="0.015 0 -0.08" material="armor_white" contype="0" conaffinity="0"/>
+                <geom type="box" size="0.01 0.025 0.06" pos="-0.018 0 -0.08" material="joint_metal" contype="0" conaffinity="0"/>
+
+                <!-- Wrist gimbal ring -->
+                <geom type="cylinder" size="0.026 0.012" pos="0 0 -0.17" material="chrome_trim" contype="0" conaffinity="0"/>
+
+                <!-- ================= LEFT HAND (5 ARTICULATED FINGERS) ================= -->
+                <body name="left_hand" pos="0 0 -0.21">
+                  <joint name="left_wrist" type="hinge" axis="1 0 0" range="-1.0 1.0" damping="0.5"/>
+                  <!-- Palm Core with Active High-Traction Ground Contact -->
+                  <geom name="left_palm_core" type="box" size="0.015 0.032 0.035" material="carbon_frame" density="700" friction="1.5 0.005 0.0001"/>
+                  <!-- Dorsal Hand Armor Shield -->
+                  <geom type="box" size="0.008 0.03 0.03" pos="0.016 0 0" material="armor_white" contype="0" conaffinity="0"/>
+                  <site name="left_palm" pos="0 0 -0.03" size="0.01"/>
+
+                  <!-- Articulated Left Thumb (Opposable Pitch & Press) -->
+                  <body name="left_thumb" pos="0 -0.025 0.01">
+                    <joint name="left_thumb_pitch" type="hinge" axis="0 1 0" range="-0.4 1.2" damping="0.2"/>
+                    <geom type="capsule" fromto="0 0 0 0.015 -0.020 -0.020" size="0.007" material="joint_metal" density="400"/>
+                    <geom name="left_thumb_pad" type="capsule" fromto="0.015 -0.020 -0.020 0.025 -0.030 -0.035" size="0.006" material="finger_pad" friction="1.8 0.005 0.0001"/>
+                    <site name="left_thumb_tip" pos="0.025 -0.030 -0.035" size="0.005"/>
+                  </body>
+
+                  <!-- Articulated Left Fingers (Grip & Floor Press Flexion) -->
+                  <body name="left_fingers" pos="0.008 0 -0.035">
+                    <joint name="left_finger_pitch" type="hinge" axis="0 1 0" range="-0.4 1.4" damping="0.2"/>
+                    <!-- Index Finger -->
+                    <geom type="capsule" fromto="0 -0.022 0 0 -0.022 -0.030" size="0.006" material="joint_metal" density="400"/>
+                    <geom name="left_index_pad" type="capsule" fromto="0 -0.022 -0.030 -0.003 -0.022 -0.050" size="0.005" material="finger_pad" friction="1.8 0.005 0.0001"/>
+                    <!-- Middle Finger -->
+                    <geom type="capsule" fromto="0 -0.007 0 0 -0.007 -0.035" size="0.006" material="joint_metal" density="400"/>
+                    <geom name="left_middle_pad" type="capsule" fromto="0 -0.007 -0.035 -0.003 -0.007 -0.057" size="0.005" material="finger_pad" friction="1.8 0.005 0.0001"/>
+                    <!-- Ring Finger -->
+                    <geom type="capsule" fromto="0 0.008 0 0 0.008 -0.030" size="0.006" material="joint_metal" density="400"/>
+                    <geom name="left_ring_pad" type="capsule" fromto="0 0.008 -0.030 -0.003 0.008 -0.050" size="0.005" material="finger_pad" friction="1.8 0.005 0.0001"/>
+                    <!-- Pinky Finger -->
+                    <geom type="capsule" fromto="0 0.022 0 0 0.022 -0.023" size="0.0055" material="joint_metal" density="400"/>
+                    <geom name="left_pinky_pad" type="capsule" fromto="0 0.022 -0.023 -0.003 0.022 -0.040" size="0.005" material="finger_pad" friction="1.8 0.005 0.0001"/>
+                    <site name="left_fingertips" pos="0 0 -0.050" size="0.005"/>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+
+        </body>
+      </body>
+
+      <!-- ================= RIGHT LEG (ANATOMICAL QUAD, KNEECAP, CALF, FOOT) ================= -->
+      <body name="right_hip" pos="0 -0.11 -0.06">
+        <joint name="right_hip_yaw" type="hinge" axis="0 0 1" range="-0.6 0.6" damping="3.5"/>
+        <joint name="right_hip_roll" type="hinge" axis="1 0 0" range="-0.6 0.6" damping="3.5"/>
+        <joint name="right_hip_pitch" type="hinge" axis="0 1 0" range="-1.4 0.8" damping="4.0"/>
+        
+        <!-- Hip gimbal core -->
+        <geom type="sphere" size="0.052" material="joint_metal" density="900"/>
+        <!-- IRL Orthogonal Hip Roll & Hip Pitch QDD Pancake Servo Cans (mass="0") -->
+        <geom type="cylinder" size="0.052 0.024" zaxis="1 0 0" material="joint_metal" contype="0" conaffinity="0" mass="0"/>
+        <geom type="cylinder" size="0.056 0.028" pos="0 -0.025 0" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0"/>
+        <geom type="cylinder" size="0.044 0.030" pos="0 -0.025 0" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0"/>
+
+        <body name="right_thigh" pos="0 0 -0.20">
+          <!-- Structural thigh bone -->
+          <geom type="capsule" fromto="0 0 0.16 0 0 -0.16" size="0.045" material="carbon_frame" density="1000"/>
+          <!-- IRL Twin-Spar CNC 6061-T6 Side Struts (mass="0") -->
+          <geom type="box" size="0.022 0.008 0.16" pos="0 -0.048 0" material="joint_metal" contype="0" conaffinity="0" mass="0"/>
+          <geom type="box" size="0.022 0.008 0.16" pos="0 0.048 0" material="joint_metal" contype="0" conaffinity="0" mass="0"/>
+          <!-- Front Quadriceps Armor Shield -->
+          <geom type="capsule" fromto="0.025 0 0.12 0.025 0 -0.12" size="0.035" material="armor_white" contype="0" conaffinity="0"/>
+          <!-- Lateral Thigh Armor Plate -->
+          <geom type="box" size="0.03 0.012 0.13" pos="0 -0.045 0" material="armor_white" contype="0" conaffinity="0"/>
+          <!-- Rear Hamstring Contour -->
+          <geom type="capsule" fromto="-0.02 0 0.10 -0.02 0 -0.10" size="0.03" material="carbon_frame" contype="0" conaffinity="0"/>
+
+          <body name="right_shin" pos="0 0 -0.20">
+            <joint name="right_knee" type="hinge" axis="0 1 0" range="0.0 2.2" damping="3.5"/>
+            
+            <!-- Knee hinge axle -->
+            <geom type="cylinder" size="0.04 0.035" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0"/>
+            <geom type="cylinder" size="0.036 0.040" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0"/>
+            <!-- Floating Patella (Kneecap) Guard -->
+            <geom type="box" size="0.025 0.038 0.03" pos="0.045 0 0" material="armor_white" friction="2.0 0.01 0.001"/>
+
+            <!-- Shin structural bone -->
+            <geom type="capsule" fromto="0 0 0 0 0 -0.32" size="0.040" material="carbon_frame" density="950"/>
+            <!-- IRL Dual Parallel Push-Rod Linkage Struts for Ankle Pitch/Roll (mass="0") -->
+            <geom type="capsule" fromto="-0.032 -0.032 -0.05 -0.028 -0.028 -0.33" size="0.006" material="chrome_trim" contype="0" conaffinity="0" mass="0"/>
+            <geom type="capsule" fromto="-0.032 0.032 -0.05 -0.028 0.028 -0.33" size="0.006" material="chrome_trim" contype="0" conaffinity="0" mass="0"/>
+            <!-- Front Shin Armor Guard (Tapered) -->
+            <geom type="box" size="0.02 0.035 0.12" pos="0.035 0 -0.15" material="armor_white" contype="0" conaffinity="0"/>
+            <!-- Posterior Calf Muscle Contour -->
+            <geom type="capsule" fromto="-0.025 0 -0.06 -0.025 0 -0.22" size="0.032" material="carbon_frame" contype="0" conaffinity="0"/>
+
+            <!-- Ankle gimbal assembly -->
+            <geom type="cylinder" size="0.03 0.025" pos="0 0 -0.34" zaxis="0 1 0" material="chrome_trim" contype="0" conaffinity="0"/>
+
+            <!-- ================= RIGHT FOOT (ANATOMICAL HEEL, ARCH & SOLE) ================= -->
+            <body name="right_foot" pos="0 0 -0.36">
+              <joint name="right_ankle_pitch" type="hinge" axis="0 1 0" range="-0.8 0.8" damping="2.5"/>
+              <joint name="right_ankle_roll" type="hinge" axis="1 0 0" range="-0.4 0.4" damping="2.5"/>
+              
+              <!-- Main ground contact collision box -->
+              <geom name="right_foot_geom" type="box" pos="0.04 0 0" size="0.12 0.06 0.02" material="sole_rubber" friction="1.2 0.005 0.0001" condim="6" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" density="900"/>
+              <!-- IRL CNC Aluminum Mid-Sole Structural Plate (mass="0") -->
+              <geom type="box" size="0.115 0.056 0.006" pos="0.04 0 0.012" material="chrome_trim" contype="0" conaffinity="0" mass="0"/>
+              
+              <!-- Sculpted Foot Upper Shell -->
+              <geom type="box" size="0.08 0.05 0.02" pos="0.02 0 0.02" material="armor_white" contype="0" conaffinity="0"/>
+              <!-- Contoured Heel Cup -->
+              <geom type="ellipsoid" size="0.04 0.045 0.025" pos="-0.05 0 0.02" material="carbon_frame" contype="0" conaffinity="0"/>
+              <!-- Angled Toe Guard -->
+              <geom type="box" size="0.035 0.05 0.012" pos="0.11 0 0.01" material="armor_white" contype="0" conaffinity="0"/>
+
+              <site name="right_sole" pos="0.04 0 -0.02" size="0.01"/>
+            </body>
+          </body>
+        </body>
+      </body>
+
+      <!-- ================= LEFT LEG (ANATOMICAL QUAD, KNEECAP, CALF, FOOT) ================= -->
+      <body name="left_hip" pos="0 0.11 -0.06">
+        <joint name="left_hip_yaw" type="hinge" axis="0 0 1" range="-0.6 0.6" damping="3.5"/>
+        <joint name="left_hip_roll" type="hinge" axis="1 0 0" range="-0.6 0.6" damping="3.5"/>
+        <joint name="left_hip_pitch" type="hinge" axis="0 1 0" range="-1.4 0.8" damping="4.0"/>
+        
+        <!-- Hip gimbal core -->
+        <geom type="sphere" size="0.052" material="joint_metal" density="900"/>
+        <!-- IRL Orthogonal Hip Roll & Hip Pitch QDD Pancake Servo Cans (mass="0") -->
+        <geom type="cylinder" size="0.052 0.024" zaxis="1 0 0" material="joint_metal" contype="0" conaffinity="0" mass="0"/>
+        <geom type="cylinder" size="0.056 0.028" pos="0 0.025 0" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0" mass="0"/>
+        <geom type="cylinder" size="0.044 0.030" pos="0 0.025 0" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0"/>
+
+        <body name="left_thigh" pos="0 0 -0.20">
+          <!-- Structural thigh bone -->
+          <geom type="capsule" fromto="0 0 0.16 0 0 -0.16" size="0.045" material="carbon_frame" density="1000"/>
+          <!-- IRL Twin-Spar CNC 6061-T6 Side Struts (mass="0") -->
+          <geom type="box" size="0.022 0.008 0.16" pos="0 -0.048 0" material="joint_metal" contype="0" conaffinity="0" mass="0"/>
+          <geom type="box" size="0.022 0.008 0.16" pos="0 0.048 0" material="joint_metal" contype="0" conaffinity="0" mass="0"/>
+          <!-- Front Quadriceps Armor Shield -->
+          <geom type="capsule" fromto="0.025 0 0.12 0.025 0 -0.12" size="0.035" material="armor_white" contype="0" conaffinity="0"/>
+          <!-- Lateral Thigh Armor Plate -->
+          <geom type="box" size="0.03 0.012 0.13" pos="0 0.045 0" material="armor_white" contype="0" conaffinity="0"/>
+          <!-- Rear Hamstring Contour -->
+          <geom type="capsule" fromto="-0.02 0 0.10 -0.02 0 -0.10" size="0.03" material="carbon_frame" contype="0" conaffinity="0"/>
+
+          <body name="left_shin" pos="0 0 -0.20">
+            <joint name="left_knee" type="hinge" axis="0 1 0" range="0.0 2.2" damping="3.5"/>
+            
+            <!-- Knee hinge axle -->
+            <geom type="cylinder" size="0.04 0.035" zaxis="0 1 0" material="joint_metal" contype="0" conaffinity="0"/>
+            <geom type="cylinder" size="0.036 0.040" zaxis="0 1 0" material="anodized_gold" contype="0" conaffinity="0" mass="0"/>
+            <!-- Floating Patella (Kneecap) Guard -->
+            <geom type="box" size="0.025 0.038 0.03" pos="0.045 0 0" material="armor_white" friction="2.0 0.01 0.001"/>
+
+            <!-- Shin structural bone -->
+            <geom type="capsule" fromto="0 0 0 0 0 -0.32" size="0.040" material="carbon_frame" density="950"/>
+            <!-- IRL Dual Parallel Push-Rod Linkage Struts for Ankle Pitch/Roll (mass="0") -->
+            <geom type="capsule" fromto="-0.032 -0.032 -0.05 -0.028 -0.028 -0.33" size="0.006" material="chrome_trim" contype="0" conaffinity="0" mass="0"/>
+            <geom type="capsule" fromto="-0.032 0.032 -0.05 -0.028 0.028 -0.33" size="0.006" material="chrome_trim" contype="0" conaffinity="0" mass="0"/>
+            <!-- Front Shin Armor Guard (Tapered) -->
+            <geom type="box" size="0.02 0.035 0.12" pos="0.035 0 -0.15" material="armor_white" contype="0" conaffinity="0"/>
+            <!-- Posterior Calf Muscle Contour -->
+            <geom type="capsule" fromto="-0.025 0 -0.06 -0.025 0 -0.22" size="0.032" material="carbon_frame" contype="0" conaffinity="0"/>
+
+            <!-- Ankle gimbal assembly -->
+            <geom type="cylinder" size="0.03 0.025" pos="0 0 -0.34" zaxis="0 1 0" material="chrome_trim" contype="0" conaffinity="0"/>
+
+            <!-- ================= LEFT FOOT (ANATOMICAL HEEL, ARCH & SOLE) ================= -->
+            <body name="left_foot" pos="0 0 -0.36">
+              <joint name="left_ankle_pitch" type="hinge" axis="0 1 0" range="-0.8 0.8" damping="2.5"/>
+              <joint name="left_ankle_roll" type="hinge" axis="1 0 0" range="-0.4 0.4" damping="2.5"/>
+              
+              <!-- Main ground contact collision box -->
+              <geom name="left_foot_geom" type="box" pos="0.04 0 0" size="0.12 0.06 0.02" material="sole_rubber" friction="1.2 0.005 0.0001" condim="6" solref="0.004 1" solimp="0.95 0.99 0.001 0.5 2" density="900"/>
+              <!-- IRL CNC Aluminum Mid-Sole Structural Plate (mass="0") -->
+              <geom type="box" size="0.115 0.056 0.006" pos="0.04 0 0.012" material="chrome_trim" contype="0" conaffinity="0" mass="0"/>
+              
+              <!-- Sculpted Foot Upper Shell -->
+              <geom type="box" size="0.08 0.05 0.02" pos="0.02 0 0.02" material="armor_white" contype="0" conaffinity="0"/>
+              <!-- Contoured Heel Cup -->
+              <geom type="ellipsoid" size="0.04 0.045 0.025" pos="-0.05 0 0.02" material="carbon_frame" contype="0" conaffinity="0"/>
+              <!-- Angled Toe Guard -->
+              <geom type="box" size="0.035 0.05 0.012" pos="0.11 0 0.01" material="armor_white" contype="0" conaffinity="0"/>
+
+              <site name="left_sole" pos="0.04 0 -0.02" size="0.01"/>
+            </body>
+          </body>
+        </body>
+      </body>
+
+    </body>
+  </worldbody>
+
+  <!-- ================= ACTUATORS (27 POSITION SERVOS) ================= -->
+  <actuator>
+    <!-- Spine (3) -->
+    <position name="waist_yaw_act" joint="waist_yaw" kp="250" kv="25" ctrlrange="-0.8 0.8" forcerange="-120 120"/>
+    <position name="waist_roll_act" joint="waist_roll" kp="300" kv="30" ctrlrange="-0.4 0.4" forcerange="-150 150"/>
+    <position name="waist_pitch_act" joint="waist_pitch" kp="500" kv="50" ctrlrange="-0.5 0.7" forcerange="-220 220"/>
+
+    <!-- Head & Neck (2) -->
+    <position name="neck_yaw_act" joint="neck_yaw" kp="50" kv="5" ctrlrange="-1.4 1.4" forcerange="-35 35"/>
+    <position name="neck_pitch_act" joint="neck_pitch" kp="60" kv="6" ctrlrange="-0.7 0.7" forcerange="-40 40"/>
+
+    <!-- Right Arm (5) -->
+    <position name="right_shoulder_pitch_act" joint="right_shoulder_pitch" kp="300" kv="30" ctrlrange="-2.2 1.5" forcerange="-120 120"/>
+    <position name="right_shoulder_roll_act" joint="right_shoulder_roll" kp="250" kv="25" ctrlrange="-1.8 0.5" forcerange="-100 100"/>
+    <position name="right_shoulder_yaw_act" joint="right_shoulder_yaw" kp="80" kv="8" ctrlrange="-1.5 1.5" forcerange="-70 70"/>
+    <position name="right_elbow_act" joint="right_elbow" kp="250" kv="25" ctrlrange="-2.2 0.0" forcerange="-90 90"/>
+    <position name="right_wrist_act" joint="right_wrist" kp="40" kv="4" ctrlrange="-1.0 1.0" forcerange="-40 40"/>
+
+    <!-- Left Arm (5) -->
+    <position name="left_shoulder_pitch_act" joint="left_shoulder_pitch" kp="300" kv="30" ctrlrange="-2.2 1.5" forcerange="-120 120"/>
+    <position name="left_shoulder_roll_act" joint="left_shoulder_roll" kp="250" kv="25" ctrlrange="-0.5 1.8" forcerange="-100 100"/>
+    <position name="left_shoulder_yaw_act" joint="left_shoulder_yaw" kp="80" kv="8" ctrlrange="-1.5 1.5" forcerange="-70 70"/>
+    <position name="left_elbow_act" joint="left_elbow" kp="250" kv="25" ctrlrange="-2.2 0.0" forcerange="-90 90"/>
+    <position name="left_wrist_act" joint="left_wrist" kp="40" kv="4" ctrlrange="-1.0 1.0" forcerange="-40 40"/>
+
+    <!-- Right Leg (6) -->
+    <position name="right_hip_yaw_act" joint="right_hip_yaw" kp="350" kv="35" ctrlrange="-0.6 0.6" forcerange="-140 140"/>
+    <position name="right_hip_roll_act" joint="right_hip_roll" kp="450" kv="45" ctrlrange="-0.6 0.6" forcerange="-180 180"/>
+    <position name="right_hip_pitch_act" joint="right_hip_pitch" kp="700" kv="70" ctrlrange="-1.4 0.8" forcerange="-240 240"/>
+    <position name="right_knee_act" joint="right_knee" kp="800" kv="80" ctrlrange="0.0 2.2" forcerange="-260 260"/>
+    <position name="right_ankle_pitch_act" joint="right_ankle_pitch" kp="600" kv="60" ctrlrange="-0.8 0.8" forcerange="-180 180"/>
+    <position name="right_ankle_roll_act" joint="right_ankle_roll" kp="300" kv="30" ctrlrange="-0.4 0.4" forcerange="-130 130"/>
+
+    <!-- Left Leg (6) -->
+    <position name="left_hip_yaw_act" joint="left_hip_yaw" kp="350" kv="35" ctrlrange="-0.6 0.6" forcerange="-140 140"/>
+    <position name="left_hip_roll_act" joint="left_hip_roll" kp="450" kv="45" ctrlrange="-0.6 0.6" forcerange="-180 180"/>
+    <position name="left_hip_pitch_act" joint="left_hip_pitch" kp="700" kv="70" ctrlrange="-1.4 0.8" forcerange="-240 240"/>
+    <position name="left_knee_act" joint="left_knee" kp="800" kv="80" ctrlrange="0.0 2.2" forcerange="-260 260"/>
+    <position name="left_ankle_pitch_act" joint="left_ankle_pitch" kp="600" kv="60" ctrlrange="-0.8 0.8" forcerange="-180 180"/>
+    <position name="left_ankle_roll_act" joint="left_ankle_roll" kp="300" kv="30" ctrlrange="-0.4 0.4" forcerange="-130 130"/>
+
+    <!-- Articulated Dexterous Hands & Fingers (4) -->
+    <position name="right_finger_act" joint="right_finger_pitch" kp="150" kv="15" ctrlrange="-0.4 1.4" forcerange="-60 60"/>
+    <position name="right_thumb_act" joint="right_thumb_pitch" kp="120" kv="12" ctrlrange="-0.4 1.2" forcerange="-50 50"/>
+    <position name="left_finger_act" joint="left_finger_pitch" kp="150" kv="15" ctrlrange="-0.4 1.4" forcerange="-60 60"/>
+    <position name="left_thumb_act" joint="left_thumb_pitch" kp="120" kv="12" ctrlrange="-0.4 1.2" forcerange="-50 50"/>
+  </actuator>
+
+  <!-- ================= COLLISION EXCLUSIONS ================= -->
+  <contact>
+    <exclude body1="pelvis" body2="torso_lower"/>
+    <exclude body1="torso_lower" body2="torso_upper"/>
+    <exclude body1="torso_upper" body2="neck"/>
+    <exclude body1="neck" body2="head"/>
+
+    <!-- Arms -->
+    <exclude body1="torso_upper" body2="right_shoulder"/>
+    <exclude body1="torso_upper" body2="right_upper_arm"/>
+    <exclude body1="right_shoulder" body2="right_upper_arm"/>
+    <exclude body1="right_upper_arm" body2="right_forearm"/>
+    <exclude body1="right_forearm" body2="right_hand"/>
+
+    <exclude body1="torso_upper" body2="left_shoulder"/>
+    <exclude body1="torso_upper" body2="left_upper_arm"/>
+    <exclude body1="left_shoulder" body2="left_upper_arm"/>
+    <exclude body1="left_upper_arm" body2="left_forearm"/>
+    <exclude body1="left_forearm" body2="left_hand"/>
+
+    <!-- Legs -->
+    <exclude body1="pelvis" body2="right_hip"/>
+    <exclude body1="pelvis" body2="right_thigh"/>
+    <exclude body1="right_hip" body2="right_thigh"/>
+    <exclude body1="right_thigh" body2="right_shin"/>
+    <exclude body1="right_shin" body2="right_foot"/>
+
+    <exclude body1="pelvis" body2="left_hip"/>
+    <exclude body1="pelvis" body2="left_thigh"/>
+    <exclude body1="left_hip" body2="left_thigh"/>
+    <exclude body1="left_thigh" body2="left_shin"/>
+    <exclude body1="left_shin" body2="left_foot"/>
+  </contact>
+</mujoco>

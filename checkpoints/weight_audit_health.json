@@ -1,0 +1,57 @@
+{
+  "timestamp": 1794307977.6015766,
+  "time_str": "2026-11-10 16:22:57",
+  "file_age_sec": 1.6,
+  "layers": {
+    "mlp_extractor.policy_net.0.weight": {
+      "shape": [
+        256,
+        141
+      ],
+      "frobenius_norm": 3.4127,
+      "delta_drift": 0.384314
+    },
+    "mlp_extractor.policy_net.0.bias": {
+      "shape": [
+        256
+      ],
+      "frobenius_norm": 0.0791,
+      "delta_drift": 0.027332
+    },
+    "mlp_extractor.policy_net.2.weight": {
+      "shape": [
+        128,
+        256
+      ],
+      "frobenius_norm": 2.3565,
+      "delta_drift": 0.326709
+    },
+    "mlp_extractor.policy_net.2.bias": {
+      "shape": [
+        128
+      ],
+      "frobenius_norm": 0.1057,
+      "delta_drift": 0.02345
+    },
+    "action_net.weight": {
+      "shape": [
+        12,
+        128
+      ],
+      "frobenius_norm": 0.4301,
+      "delta_drift": 0.101546
+    },
+    "action_net.bias": {
+      "shape": [
+        12
+      ],
+      "frobenius_norm": 0.052,
+      "delta_drift": 0.011249
+    }
+  },
+  "total_frobenius_norm": 4.172,
+  "weight_drift_from_previous": 0.515918,
+  "is_learning_active": true,
+  "is_healthy": true,
+  "anomalies": []
+}

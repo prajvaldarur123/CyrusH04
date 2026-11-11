@@ -1,0 +1,58 @@
+{
+  "timestamp": 1794308037.1783936,
+  "time_str": "2026-11-10 16:23:57",
+  "latest_iteration": 160,
+  "previous_iteration": 159,
+  "baseline_iteration": 1,
+  "latest_state": {
+    "iteration": 160,
+    "time_str": "37:37",
+    "duration_s": 3.3,
+    "return": 38.91,
+    "push_mps": 0.5,
+    "falls_pct": 67.0,
+    "status": "[FELL at 3.3s]",
+    "timestamp": 1794307345.922393,
+    "time_recorded": "2026-11-10 16:12:25"
+  },
+  "previous_state": {
+    "iteration": 159,
+    "time_str": "37:23",
+    "duration_s": 10.0,
+    "return": 38.94,
+    "push_mps": 0.5,
+    "falls_pct": 0.0,
+    "status": "[SURVIVED 10.0s]",
+    "timestamp": 1794307330.8902013,
+    "time_recorded": "2026-11-10 16:12:10"
+  },
+  "baseline_state": {
+    "iteration": 1,
+    "time_str": "1:38",
+    "duration_s": 10.0,
+    "return": 25.98,
+    "push_mps": 0.0,
+    "falls_pct": 0.0,
+    "status": "[SURVIVED 10.0s]",
+    "timestamp": 1794295203.6478336,
+    "time_recorded": "2026-11-10 12:50:03"
+  },
+  "consecutive_differential": {
+    "delta_return": -0.03,
+    "delta_duration_s": -6.7,
+    "delta_falls_pct": 67.0,
+    "delta_push_mps": 0.0,
+    "weight_frobenius_drift": 0.515918
+  },
+  "cumulative_differential_from_baseline": {
+    "cum_delta_return": 12.93,
+    "cum_delta_duration_s": -6.7,
+    "cum_delta_falls_pct": 67.0,
+    "cum_delta_push_mps": 0.5,
+    "current_total_frobenius_norm": 4.172
+  },
+  "neural_health": {
+    "weights_healthy": true,
+    "gradient_active": true
+  }
+}

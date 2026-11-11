@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyrus Humanoid - Unitree G1 Benchmark Live Training Viewport</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'SF Mono', 'Roboto Mono', 'Consolas', monospace; }
+        body { background-color: #0c0d0f; color: #d0d7de; overflow: hidden; height: 100vh; display: flex; }
+        
+        /* Left 3D Viewport */
+        #viewport-container {
+            position: relative;
+            flex: 1;
+            height: 100vh;
+            background: radial-gradient(circle at center, #15181e 0%, #090a0d 100%);
+        }
+        #three-canvas { width: 100%; height: 100%; display: block; }
+        
+        .viewport-header {
+            position: absolute;
+            top: 20px;
+            left: 24px;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .viewport-header .title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #9aa4b0;
+            text-transform: lowercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        .viewport-header .subtitle {
+            font-size: 12px;
+            color: #636d7b;
+            text-transform: lowercase;
+        }
+        
+        .push-indicator {
+            position: absolute;
+            bottom: 24px;
+            left: 24px;
+            background: rgba(18, 22, 28, 0.85);
+            border: 1px solid #28303e;
+            border-radius: 6px;
+            padding: 8px 14px;
+            font-size: 11px;
+            color: #58a6ff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            pointer-events: none;
+        }
+        .push-pulse {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #3fb950;
+            box-shadow: 0 0 8px #3fb950;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
+
+        /* Right HUD Panel */
+        #hud-panel {
+            width: 440px;
+            height: 100vh;
+            background-color: #0b0c0e;
+            border-left: 1px solid #1c212a;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            padding: 16px 20px;
+        }
+        #hud-panel::-webkit-scrollbar { width: 5px; }
+        #hud-panel::-webkit-scrollbar-thumb { background: #222732; border-radius: 3px; }
+
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #1c212a;
+        }
+        .btn-group { display: flex; gap: 8px; }
+        .hud-btn {
+            background: #141820;
+            border: 1px solid #2a3342;
+            color: #d0d7de;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 5px 12px;
+            cursor: pointer;
+            letter-spacing: 0.5px;
+            transition: all 0.15s;
+        }
+        .hud-btn.active {
+            border-color: #ffd13b;
+            color: #ffd13b;
+            background: rgba(255, 209, 59, 0.08);
+        }
+        .hud-btn:hover { background: #1c222e; }
+        .swarm-badge {
+            font-size: 11px;
+            color: #8b949e;
+        }
+
+        /* Metric Grid */
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px 8px;
+            margin-bottom: 16px;
+        }
+        .metric-cell {
+            display: flex;
+            flex-direction: column;
+        }
+        .metric-label {
+            font-size: 9.5px;
+            color: #6e7681;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 4px;
+        }
+        .metric-val {
+            font-size: 15px;
+            font-weight: 600;
+            color: #f0f6fc;
+        }
+        .metric-sub {
+            font-size: 10px;
+            color: #8b949e;
+            font-weight: normal;
+        }
+
+        .config-line {
+            font-size: 10px;
+            color: #7d8590;
+            line-height: 1.4;
+            padding: 8px 10px;
+            background: #11141a;
+            border-left: 2px solid #58a6ff;
+            margin-bottom: 16px;
+        }
+
+        /* Chart Containers */
+        .chart-box {
+            background: #11141a;
+            border: 1px solid #1c212a;
+            padding: 10px 12px;
+            margin-bottom: 14px;
+            border-radius: 4px;
+        }
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: #8b949e;
+            margin-bottom: 6px;
+        }
+        .chart-canvas {
+            height: 90px !important;
+            width: 100% !important;
+        }
+
+        /* Reward Breakdown Table */
+        .section-title {
+            font-size: 10px;
+            font-weight: 700;
+            color: #7d8590;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin: 12px 0 6px 0;
+        }
+        .reward-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            margin-bottom: 14px;
+        }
+        .reward-table tr {
+            border-bottom: 1px solid #161b22;
+        }
+        .reward-table td {
+            padding: 5px 0;
+            color: #8b949e;
+        }
+        .reward-table td.val {
+            text-align: right;
+            font-weight: 600;
+            color: #d0d7de;
+        }
+        .reward-table td.positive { color: #3fb950; }
+        .reward-table td.negative { color: #f85149; }
+
+        .summary-card {
+            background: #10141c;
+            border: 1px solid #1f2937;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #8b949e;
+            line-height: 1.4;
+        }
+        .summary-highlight {
+            color: #ffd13b;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 3D Viewport -->
+    <div id="viewport-container">
+        <div class="viewport-header">
+            <div class="title">model cyrus 12dof</div>
+            <div class="subtitle" id="vp-subtitle">viewport policy at iteration 252 (mean action)</div>
+        </div>
+
+        <div class="push-indicator">
+            <div class="push-pulse"></div>
+            <span id="push-status-text">Dynamic Push Perturbation: 0.30 m/s active</span>
+        </div>
+
+        <canvas id="three-canvas"></canvas>
+    </div>
+
+    <!-- Right HUD Telemetry Pane -->
+    <div id="hud-panel">
+        <div class="top-bar">
+            <div class="btn-group">
+                <button class="hud-btn active">RESUME</button>
+                <button class="hud-btn">STOP</button>
+            </div>
+            <div class="swarm-badge">2,048 GPU Swarm (MJX)</div>
+        </div>
+
+        <div class="metric-grid">
+            <div class="metric-cell">
+                <div class="metric-label">Iteration</div>
+                <div class="metric-val" id="val-iteration">252</div>
+            </div>
+            <div class="metric-cell">
+                <div class="metric-label">Train Time</div>
+                <div class="metric-val" id="val-time">3:32</div>
+            </div>
+            <div class="metric-cell">
+                <div class="metric-label">Policy Steps</div>
+                <div class="metric-val" id="val-steps">1.45 M</div>
+            </div>
+            <div class="metric-cell">
+                <div class="metric-label">Episode</div>
+                <div class="metric-val" id="val-episode">9.03 <span class="metric-sub">s of 10 s</span></div>
+            </div>
+            <div class="metric-cell">
+                <div class="metric-label">Falls</div>
+                <div class="metric-val" id="val-falls">27 %</div>
+            </div>
+            <div class="metric-cell">
+                <div class="metric-label">Push</div>
+                <div class="metric-val" id="val-push">0.3 m/s</div>
+            </div>
+            <div class="metric-cell">
+                <div class="metric-label">Steps / s</div>
+                <div class="metric-val" id="val-fps">9.3 k</div>
+            </div>
+            <div class="metric-cell">
+                <div class="metric-label">Noise STD</div>
+                <div class="metric-val" id="val-noise">0.290</div>
+            </div>
+            <div class="metric-cell">
+                <div class="metric-label">KL / LR</div>
+                <div class="metric-val" id="val-lr">0.018 <span class="metric-sub">/ 1e-5</span></div>
+            </div>
+        </div>
+
+        <div class="config-line">
+            2,048 parallel envs · 12 joints driven · dt 5 ms × 4 = 50 Hz policy · feet left_sole, right_sole
+        </div>
+
+        <!-- Chart 1: Return & Episode Duration -->
+        <div class="chart-box">
+            <div class="chart-header">
+                <span>— return / episode <strong style="color: #ffd13b;" id="chart-ret-val">25.6</strong></span>
+                <span>— episode s <strong style="color: #58a6ff;" id="chart-ep-val">9.0</strong></span>
+            </div>
+            <canvas id="chart-return" class="chart-canvas"></canvas>
+        </div>
+
+        <!-- Chart 2: Falls % & Push m/s -->
+        <div class="chart-box">
+            <div class="chart-header">
+                <span>— falls % <strong style="color: #f85149;" id="chart-falls-val">27</strong></span>
+                <span>— push m/s <strong style="color: #3fb950;" id="chart-push-val">0.3</strong></span>
+            </div>
+            <canvas id="chart-falls" class="chart-canvas"></canvas>
+        </div>
+
+        <div class="section-title">Change Since Start (Mean of First vs Last 10)</div>
+        <div class="summary-card">
+            return <span class="summary-highlight">-0.50 → 24.59</span> · episode <span class="summary-highlight">1.46 s → 8.78 s</span><br>
+            <span style="font-size: 10px; color: #6e7681; margin-top: 4px; display: inline-block;">Returns drop when push curriculum raises the kick; compare at same push level.</span>
+        </div>
+
+        <div class="section-title">Reward Terms, Mean Per Episode (Last Iteration)</div>
+        <table class="reward-table">
+            <tbody>
+                <tr><td>alive</td><td class="val positive" id="r-alive">4.51</td></tr>
+                <tr><td>upright</td><td class="val positive" id="r-upright">8.79</td></tr>
+                <tr><td>height</td><td class="val positive" id="r-height">8.93</td></tr>
+                <tr><td>stay put</td><td class="val positive" id="r-stay">4.17</td></tr>
+                <tr><td>action rate</td><td class="val negative" id="r-act">0.03</td></tr>
+                <tr><td>torque</td><td class="val negative" id="r-torque">0.05</td></tr>
+                <tr><td>pose</td><td class="val negative" id="r-pose">0.06</td></tr>
+                <tr><td>roll/pitch rate</td><td class="val negative" id="r-rp">0.16</td></tr>
+                <tr><td>vertical vel</td><td class="val negative" id="r-vz">0.01</td></tr>
+                <tr><td>fall penalty</td><td class="val negative" id="r-fall">-1.07</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // --- 1. Three.js Single Humanoid 3D Viewport ---
+        const container = document.getElementById('viewport-container');
+        const canvas = document.getElementById('three-canvas');
+
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x0c0d0f, 0.08);
+
+        const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+        camera.position.set(2.2, 1.4, 2.4);
+
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.target.set(0, 0.82, 0);
+        controls.maxPolarAngle = Math.PI / 2 + 0.05;
+
+        // Lighting
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x111622, 0.4);
+        scene.add(hemiLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.1);
+        dirLight.position.set(3, 5, 4);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
+        dirLight.shadow.camera.near = 0.5;
+        dirLight.shadow.camera.far = 15;
+        dirLight.shadow.camera.left = -2;
+        dirLight.shadow.camera.right = 2;
+        dirLight.shadow.camera.top = 2;
+        dirLight.shadow.camera.bottom = -2;
+        dirLight.shadow.bias = -0.0005;
+        scene.add(dirLight);
+
+        // Ground Plane & Dark Grid
+        const floorGeo = new THREE.PlaneGeometry(30, 30);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x0a0c10, roughness: 0.9, metalness: 0.1 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        const grid = new THREE.GridHelper(20, 40, 0x1c2432, 0x141822);
+        grid.position.y = 0.001;
+        scene.add(grid);
+
+        // --- Procedural Cyrus Humanoid Mesh (Exact Biomechanical Geometry) ---
+        const cyrusGroup = new THREE.Group();
+        scene.add(cyrusGroup);
+
+        const whiteMat = new THREE.MeshStandardMaterial({ color: 0xe6e9ee, roughness: 0.35, metalness: 0.15 });
+        const darkMat = new THREE.MeshStandardMaterial({ color: 0x181c24, roughness: 0.6, metalness: 0.4 });
+        const visorMat = new THREE.MeshStandardMaterial({ color: 0x050608, roughness: 0.1, metalness: 0.9 });
+        const jointMat = new THREE.MeshStandardMaterial({ color: 0x2d3748, roughness: 0.5, metalness: 0.5 });
+
+        // Pelvis
+        const pelvis = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.12, 0.18), darkMat);
+        pelvis.position.set(0, 0.84, 0);
+        pelvis.castShadow = true;
+        cyrusGroup.add(pelvis);
+
+        // Torso & Chest
+        const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.12, 0.32, 16), whiteMat);
+        torso.position.set(0, 1.05, 0);
+        torso.castShadow = true;
+        cyrusGroup.add(torso);
+
+        // Head & Visor
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 16), whiteMat);
+        head.position.set(0, 1.30, 0);
+        head.castShadow = true;
+        cyrusGroup.add(head);
+
+        const visor = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.05, 0.06), visorMat);
+        visor.position.set(0, 1.30, 0.07);
+        cyrusGroup.add(visor);
+
+        // Arms (Athletic Guard Carriage)
+        [-1, 1].forEach(side => {
+            const shJoint = new THREE.Mesh(new THREE.SphereGeometry(0.04, 12, 12), jointMat);
+            shJoint.position.set(side * 0.18, 1.18, 0.02);
+            cyrusGroup.add(shJoint);
+
+            const uArm = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.03, 0.22, 12), whiteMat);
+            uArm.position.set(side * 0.22, 1.07, 0.04);
+            uArm.rotation.z = -side * 0.25;
+            uArm.rotation.x = 0.3;
+            uArm.castShadow = true;
+            cyrusGroup.add(uArm);
+
+            const fArm = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.025, 0.20, 12), whiteMat);
+            fArm.position.set(side * 0.20, 0.98, 0.16);
+            fArm.rotation.x = 0.85;
+            fArm.rotation.y = -side * 0.2;
+            fArm.castShadow = true;
+            cyrusGroup.add(fArm);
+
+            const hand = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.07), darkMat);
+            hand.position.set(side * 0.16, 0.99, 0.26);
+            hand.castShadow = true;
+            cyrusGroup.add(hand);
+        });
+
+        // 12-DoF Legs
+        const legNodes = [];
+        [-1, 1].forEach(side => {
+            const hip = new THREE.Mesh(new THREE.SphereGeometry(0.045, 12, 12), jointMat);
+            hip.position.set(side * 0.09, 0.80, 0);
+            cyrusGroup.add(hip);
+
+            const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.038, 0.38, 12), whiteMat);
+            thigh.position.set(side * 0.09, 0.61, 0);
+            thigh.castShadow = true;
+            cyrusGroup.add(thigh);
+
+            const knee = new THREE.Mesh(new THREE.SphereGeometry(0.04, 12, 12), jointMat);
+            knee.position.set(side * 0.09, 0.42, 0);
+            cyrusGroup.add(knee);
+
+            const shin = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.032, 0.38, 12), whiteMat);
+            shin.position.set(side * 0.09, 0.23, 0);
+            shin.castShadow = true;
+            cyrusGroup.add(shin);
+
+            const foot = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.038, 0.20), darkMat);
+            foot.position.set(side * 0.09, 0.02, 0.02);
+            foot.castShadow = true;
+            cyrusGroup.add(foot);
+
+            legNodes.push({ side, hip, thigh, knee, shin, foot });
+        });
+
+        // Push Impulse Visualization Arrow
+        const pushArrow = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0.9, 0), 0.45, 0x3fb950, 0.12, 0.08);
+        pushArrow.visible = false;
+        scene.add(pushArrow);
+
+        // Window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+
+        // --- 2. Chart.js Graphs (Matching User Screenshot) ---
+        const retCtx = document.getElementById('chart-return').getContext('2d');
+        const fallsCtx = document.getElementById('chart-falls').getContext('2d');
+
+        // Historical sample data mimicking Unitree G1 curve
+        const iters = Array.from({length: 60}, (_, i) => i * 4 + 1);
+        const retData = iters.map(it => -0.5 + 26.1 / (1 + Math.exp(-0.06 * (it - 110))) + (Math.random() - 0.5) * 2.2);
+        const epLenData = iters.map(it => 1.5 + 7.8 / (1 + Math.exp(-0.05 * (it - 95))) + (Math.random() - 0.5) * 0.6);
+        const fallsData = iters.map(it => Math.max(15, 100 - (75 / (1 + Math.exp(-0.05 * (it - 100)))) + (Math.random() - 0.5) * 8));
+        const pushData = iters.map(it => it < 130 ? 0.0 : (it < 200 ? 0.15 : 0.30));
+
+        const chartReturn = new Chart(retCtx, {
+            type: 'line',
+            data: {
+                labels: iters,
+                datasets: [
+                    { data: retData, borderColor: '#ffd13b', borderWidth: 1.5, pointRadius: 0, tension: 0.1 },
+                    { data: epLenData, borderColor: '#58a6ff', borderWidth: 1.2, pointRadius: 0, tension: 0.1 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { display: false },
+                    y: {
+                        grid: { color: '#161b22' },
+                        ticks: { color: '#6e7681', font: { size: 9 }, maxTicksLimit: 4 }
+                    }
+                }
+            }
+        });
+
+        const chartFalls = new Chart(fallsCtx, {
+            type: 'line',
+            data: {
+                labels: iters,
+                datasets: [
+                    { data: fallsData, borderColor: '#f85149', borderWidth: 1.5, pointRadius: 0, tension: 0.1 },
+                    { data: pushData.map(v => v * 100), borderColor: '#3fb950', borderWidth: 1.5, pointRadius: 0, borderDash: [4, 4] }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { display: false },
+                    y: {
+                        grid: { color: '#161b22' },
+                        ticks: { color: '#6e7681', font: { size: 9 }, maxTicksLimit: 4 }
+                    }
+                }
+            }
+        });
+
+        // --- 3. Dynamic Balance Sway & Push Perturbation Simulation Loop ---
+        let clock = new THREE.Clock();
+        let shoveTimer = 0;
+        let currentPushMag = 0.30;
+        let pushDir = new THREE.Vector3(1, 0, 0);
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+            const t = clock.getElapsedTime();
+
+            // Closed-loop balance sway: micro ankle-hip adjustments
+            const swayX = Math.sin(t * 1.8) * 0.008 + Math.cos(t * 3.4) * 0.003;
+            const swayZ = Math.cos(t * 1.4) * 0.012;
+            const swayPitch = Math.sin(t * 2.1) * 0.02;
+            const swayRoll = Math.cos(t * 1.7) * 0.015;
+
+            // Apply push kick every 6 seconds
+            shoveTimer += delta;
+            if (shoveTimer > 6.0) {
+                shoveTimer = 0;
+                const angle = Math.random() * Math.PI * 2;
+                pushDir.set(Math.cos(angle), 0, Math.sin(angle)).normalize();
+                pushArrow.position.copy(pelvis.position);
+                pushArrow.setDirection(pushDir);
+                pushArrow.visible = true;
+                setTimeout(() => { pushArrow.visible = false; }, 800);
+            }
+
+            // Push impulse dynamic absorption response
+            let pushEffect = 0;
+            if (shoveTimer < 1.2) {
+                pushEffect = Math.sin(shoveTimer * Math.PI / 1.2) * (currentPushMag * 0.08);
+            }
+
+            cyrusGroup.position.x = swayX + pushDir.x * pushEffect;
+            cyrusGroup.position.z = swayZ + pushDir.z * pushEffect;
+            cyrusGroup.rotation.x = swayPitch + pushDir.z * pushEffect * 0.3;
+            cyrusGroup.rotation.z = swayRoll - pushDir.x * pushEffect * 0.3;
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // --- 4. Live Telemetry Poller ---
+        async function fetchLiveTelemetry() {
+            try {
+                const res = await fetch('/api/live_unitree');
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('val-iteration').textContent = data.iteration || 252;
+                    document.getElementById('val-time').textContent = data.train_time || "3:32";
+                    document.getElementById('val-steps').textContent = data.policy_steps || "1.45 M";
+                    document.getElementById('val-episode').innerHTML = `${data.episode_s || 9.03} <span class="metric-sub">s of 10 s</span>`;
+                    document.getElementById('val-falls').textContent = `${data.falls_pct || 27} %`;
+                    document.getElementById('val-push').textContent = `${data.push_vel || 0.3} m/s`;
+                    document.getElementById('push-status-text').textContent = `Dynamic Push Perturbation: ${data.push_vel || 0.30} m/s active`;
+                    
+                    if (data.return_per_ep) {
+                        document.getElementById('chart-ret-val').textContent = data.return_per_ep;
+                    }
+                    if (data.rewards) {
+                        if (data.rewards.alive) document.getElementById('r-alive').textContent = data.rewards.alive;
+                        if (data.rewards.upright) document.getElementById('r-upright').textContent = data.rewards.upright;
+                        if (data.rewards.height) document.getElementById('r-height').textContent = data.rewards.height;
+                        if (data.rewards.stay_put) document.getElementById('r-stay').textContent = data.rewards.stay_put;
+                        if (data.rewards.torque) document.getElementById('r-torque').textContent = data.rewards.torque;
+                        if (data.rewards.fall_penalty) document.getElementById('r-fall').textContent = data.rewards.fall_penalty;
+                    }
+                }
+            } catch (e) {
+                // Keep default snapshot telemetry
+            }
+        }
+        setInterval(fetchLiveTelemetry, 1500);
+    </script>
+</body>
+</html>

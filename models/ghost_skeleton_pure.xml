@@ -1,0 +1,81 @@
+<mujoco model="ghost_skeleton">
+  <compiler angle="radian" coordinate="local"/>
+  <option timestep="0.005" gravity="0 0 -9.80665"/>
+
+  <visual>
+    <headlight ambient="0.45 0.45 0.48" diffuse="0.8 0.8 0.85" specular="0.3 0.3 0.3"/>
+    <rgba haze="0.15 0.2 0.3 1"/>
+    <global azimuth="135" elevation="-20"/>
+  </visual>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.15 0.25 0.4" rgb2="0.04 0.06 0.10" width="512" height="512"/>
+    <texture name="grid" type="2d" builtin="checker" rgb1="0.12 0.14 0.18" rgb2="0.18 0.22 0.28" width="512" height="512"/>
+    <material name="grid" texture="grid" texrepeat="2 2" texuniform="true" reflectance="0.15"/>
+  </asset>
+
+  <worldbody>
+    <geom name="floor" type="plane" size="5 5 0.1" material="grid"/>
+    
+    <!-- Mat target zone -->
+    <geom name="target_mat" type="box" size="0.6 0.4 0.001" pos="0 0 0.001" rgba="0.15 0.55 0.35 0.5" contype="0" conaffinity="0"/>
+
+    <!-- ============================================================== -->
+    <!-- 11 PURE GHOST JOINT GUIDANCE BALLS (NO ROBOT MESH)             -->
+    <!-- ============================================================== -->
+    <!-- Head (Cyan Glow) -->
+    <body name="ghost_head" mocap="true" pos="0.50 0.0 0.22">
+      <geom type="sphere" size="0.055" rgba="0.1 0.9 1.0 0.90" contype="0" conaffinity="0"/>
+    </body>
+
+    <!-- Upper Torso / Chest (Cyan Core Glow) -->
+    <body name="ghost_torso" mocap="true" pos="0.24 0.0 0.14">
+      <geom type="sphere" size="0.065" rgba="0.1 0.9 1.0 0.90" contype="0" conaffinity="0"/>
+    </body>
+
+    <!-- Pelvis Center (Bright Green Glow) -->
+    <body name="ghost_pelvis" mocap="true" pos="0.0 0.0 0.12">
+      <geom type="sphere" size="0.065" rgba="0.2 1.0 0.4 0.90" contype="0" conaffinity="0"/>
+    </body>
+
+    <!-- Right Palm / Hand (Bright Gold Glow) -->
+    <body name="ghost_r_palm" mocap="true" pos="0.25 -0.23 0.03">
+      <geom type="sphere" size="0.042" rgba="1.0 0.85 0.1 0.95" contype="0" conaffinity="0"/>
+    </body>
+
+    <!-- Left Palm / Hand (Bright Gold Glow) -->
+    <body name="ghost_l_palm" mocap="true" pos="0.25 0.23 0.03">
+      <geom type="sphere" size="0.042" rgba="1.0 0.85 0.1 0.95" contype="0" conaffinity="0"/>
+    </body>
+
+    <!-- Right Elbow (Orange Glow) -->
+    <body name="ghost_r_elbow" mocap="true" pos="0.10 -0.28 0.20">
+      <geom type="sphere" size="0.040" rgba="1.0 0.55 0.1 0.90" contype="0" conaffinity="0"/>
+    </body>
+
+    <!-- Left Elbow (Orange Glow) -->
+    <body name="ghost_l_elbow" mocap="true" pos="0.10 0.28 0.20">
+      <geom type="sphere" size="0.040" rgba="1.0 0.55 0.1 0.90" contype="0" conaffinity="0"/>
+    </body>
+
+    <!-- Right Knee (Magenta Glow) -->
+    <body name="ghost_r_knee" mocap="true" pos="-0.32 -0.11 0.08">
+      <geom type="sphere" size="0.045" rgba="0.95 0.2 0.9 0.90" contype="0" conaffinity="0"/>
+    </body>
+
+    <!-- Left Knee (Magenta Glow) -->
+    <body name="ghost_l_knee" mocap="true" pos="-0.32 0.11 0.08">
+      <geom type="sphere" size="0.045" rgba="0.95 0.2 0.9 0.90" contype="0" conaffinity="0"/>
+    </body>
+
+    <!-- Right Foot / Sole (Emerald Green Glow) -->
+    <body name="ghost_r_foot" mocap="true" pos="-0.65 -0.11 0.04">
+      <geom type="sphere" size="0.045" rgba="0.2 1.0 0.5 0.95" contype="0" conaffinity="0"/>
+    </body>
+
+    <!-- Left Foot / Sole (Emerald Green Glow) -->
+    <body name="ghost_l_foot" mocap="true" pos="-0.65 0.11 0.04">
+      <geom type="sphere" size="0.045" rgba="0.2 1.0 0.5 0.95" contype="0" conaffinity="0"/>
+    </body>
+  </worldbody>
+</mujoco>

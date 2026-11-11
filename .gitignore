@@ -1,0 +1,26 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Large checkpoints & archive binaries (keep npz weights)
+checkpoints/*.zip
+*.zip
+*.tar.gz
+
+# Logs and Tensorboard runs
+logs/
+*.tfevents.*
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+benchmarks

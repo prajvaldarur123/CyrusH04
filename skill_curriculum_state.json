@@ -1,0 +1,14 @@
+{
+  "active_skill": 1,
+  "active_skill_name": "Quiet Stand & Postural Homeostasis (0.0 m/s push)",
+  "skill_mastery": {
+    "1": false,
+    "2": false,
+    "3": false,
+    "4": false,
+    "5": false
+  },
+  "best_duration_s": 1.45,
+  "total_timesteps": 303104,
+  "last_updated": "2026-11-10 09:46:23"
+}
