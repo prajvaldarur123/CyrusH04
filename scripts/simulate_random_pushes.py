@@ -32,7 +32,7 @@ from controller.balance_pipeline import (
     EMA_ALPHA,
     ROBUST_ROLL_GAINS
 )
-from controller.stepping_recovery import ReactiveSteppingController, SteppingState
+from controller.stepping_recovery import ReactiveSteppingController, SteppingParams, SteppingState
 
 XML_PATH = os.path.join(PROJECT_ROOT, "models", "cyrus_12dof_mjx.xml")
 
@@ -139,7 +139,8 @@ def run_random_pushes(speed_mps: float, num_pushes: int, checkpoint_path: str, r
         verify_settled_equilibrium(m, d, ctrl_nom, tol_fz=1.0, tol_qvel=1e-3, max_steps=400)
 
         ema_filter = EMAActionFilter(alpha=EMA_ALPHA, dim=12)
-        stepping_ctrl = ReactiveSteppingController()
+        params = SteppingParams(toe_limit=0.150, heel_limit=-0.090, lateral_limit=0.060, trigger_margin=0.010, t_swing=0.18)
+        stepping_ctrl = ReactiveSteppingController(params)
         prev_act = np.zeros(12, dtype=np.float32)
         init_obs = get_obs(prev_act)
         obs_buf = np.tile(init_obs, 3)
