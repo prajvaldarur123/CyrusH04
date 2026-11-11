@@ -226,7 +226,7 @@ class BalanceTester:
                     time.sleep(dt_ctrl - elapsed)
 
             # Standardized Fall Detection
-            is_fall, reason = is_robot_fallen(self.data)
+            is_fall, reason = is_robot_fallen(self.model, self.data)
             if is_fall:
                 fell = True
                 fall_time = step * dt_ctrl

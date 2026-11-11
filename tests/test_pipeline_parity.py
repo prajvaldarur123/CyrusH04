@@ -36,9 +36,11 @@ from controller.balance_pipeline import (
     get_robot_com,
     verify_settled_equilibrium,
     is_robot_fallen,
+    check_zero_action_gate,
     POSE_A,
     POSE_C,
-    ACTION_SCALE_VEC
+    ACTION_SCALE_VEC,
+    ACTION_SCALE_FLAT
 )
 
 XML_PATH = os.path.join(PROJECT_ROOT, "models", "cyrus_12dof_mjx.xml")
@@ -133,33 +135,46 @@ def test_settled_start_verification():
 
 
 def test_standard_fall_detector():
-    print("[TEST 7/7] Testing standardized fall detector criteria...")
+    print("[TEST 7/8] Testing standardized fall detector criteria & collision guard...")
     model = mujoco.MjModel.from_xml_path(XML_PATH)
     data = mujoco.MjData(model)
     
     # Stable default
     data.qpos[2] = 0.825
     data.qpos[3] = 1.0
-    is_fall, reason = is_robot_fallen(data)
+    is_fall, reason = is_robot_fallen(model, data)
     assert not is_fall
     assert reason == "STABLE"
     
     # Fallen height
     data.qpos[2] = 0.40
-    is_fall, reason = is_robot_fallen(data)
+    is_fall, reason = is_robot_fallen(model, data)
     assert is_fall
     assert "Pelvis height" in reason
     
     # Fallen roll
     data.qpos[2] = 0.80
-    # 35 deg roll quat: cos(17.5 deg), sin(17.5 deg), 0, 0
     rad = np.radians(35.0)
     data.qpos[3] = np.cos(rad / 2.0)
     data.qpos[4] = np.sin(rad / 2.0)
-    is_fall, reason = is_robot_fallen(data)
+    is_fall, reason = is_robot_fallen(model, data)
     assert is_fall
     assert "Pelvis roll" in reason
-    print("  -> Standardized fall detection verified across height, roll, and pitch.")
+    print("  -> Standardized fall detection verified across height, roll, pitch, and collision.")
+
+
+def test_zero_action_gate_rule():
+    print("[TEST 8/8] Testing A7 Zero-Action Gate Rule on Production vs Legacy...")
+    prod_data, _ = load_verified_checkpoint(MANIFEST_PATH, "active_production")
+    passed, norm, var, reason = check_zero_action_gate(prod_data)
+    assert not passed, "Quiescent baseline must be rejected by gate rule!"
+    assert "norm (0.000000e+00) is ZERO" in reason
+    print(f"  -> Correctly rejected quiescent production baseline: {reason}")
+
+    legacy_data, _ = load_verified_checkpoint(MANIFEST_PATH, "legacy_production")
+    passed_leg, norm_leg, var_leg, reason_leg = check_zero_action_gate(legacy_data)
+    assert passed_leg, "Active legacy checkpoint must pass the gate rule!"
+    print(f"  -> Correctly promoted active legacy checkpoint (norm={norm_leg:.4f}, var={var_leg:.6f}): {reason_leg}")
 
 
 if __name__ == "__main__":
@@ -173,6 +188,7 @@ if __name__ == "__main__":
     test_robot_mass_exclusion()
     test_settled_start_verification()
     test_standard_fall_detector()
+    test_zero_action_gate_rule()
     print("==================================================================")
-    print("ALL 7 PIPELINE PARITY UNIT TESTS PASSED WITH 100% SUCCESS!")
+    print("ALL 8 PIPELINE PARITY & GATE AUDIT UNIT TESTS PASSED WITH 100% SUCCESS!")
     print("==================================================================")
