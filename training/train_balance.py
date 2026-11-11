@@ -792,6 +792,7 @@ def main():
             else:
                 print(f"\n{'*'*80}\n[★ ULTIMATE SOTA MASTERY: {current_push_target:.2f} m/s STOOD 20 TIMES CONSECUTIVELY! ★]\nCyrus has mastered universal balance recovery up to 0.90 m/s across all 360 degrees!\n{'*'*80}\n", flush=True)
                 np.savez(f"/mnt/c/Users/prajval/robotics/cyrus/checkpoints/cyrus_balance_{current_push_target:.2f}ms_mastered.npz", **np_dict)
+                np.savez(PROD_NPZ, **np_dict)
                 consecutive_survivals = 0
 
         if update % 5 == 0 or update == 1:
