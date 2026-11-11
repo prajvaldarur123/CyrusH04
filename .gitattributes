@@ -1,0 +1,5 @@
+# GitHub Linguist Language Overrides
+# Treat standalone HTML 3D visualizers and dashboards as documentation/non-detectable
+# so repository language statistics accurately reflect 100% Python robotics core.
+*.html linguist-detectable=false
+*.html linguist-documentation=true
