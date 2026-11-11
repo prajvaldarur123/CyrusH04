@@ -75,6 +75,10 @@ PROD_NPZ = "/mnt/c/Users/prajval/robotics/cyrus/checkpoints/balance_12dof_produc
 MASTERED_040_NPZ = "/mnt/c/Users/prajval/robotics/cyrus/checkpoints/cyrus_balance_0.40ms_mastered.npz"
 MASTERED_050_NPZ = "/mnt/c/Users/prajval/robotics/cyrus/checkpoints/cyrus_balance_0.50ms_mastered.npz"
 MASTERED_060_NPZ = "/mnt/c/Users/prajval/robotics/cyrus/checkpoints/cyrus_balance_0.60ms_mastered.npz"
+MASTERED_070_NPZ = "/mnt/c/Users/prajval/robotics/cyrus/checkpoints/cyrus_balance_0.70ms_mastered.npz"
+MASTERED_080_NPZ = "/mnt/c/Users/prajval/robotics/cyrus/checkpoints/cyrus_balance_0.80ms_mastered.npz"
+MASTERED_090_NPZ = "/mnt/c/Users/prajval/robotics/cyrus/checkpoints/cyrus_balance_0.90ms_mastered.npz"
+CAND_ACTIVE_NPZ = "/mnt/c/Users/prajval/robotics/cyrus/checkpoints/candidate_balance_active.npz"
 
 print("=" * 80, flush=True)
 print("CYRUS HUMANOID -- SOTA FAST 50 HZ GPU SWARM BALANCE ENGINE", flush=True)
@@ -593,7 +597,7 @@ def main():
     params = model.init(rng, init_obs_act, init_obs_crit)["params"]
 
     # Warm-start from latest active or production checkpoint
-    warm_candidates = [p for p in [MASTERED_060_NPZ, MASTERED_050_NPZ, MASTERED_040_NPZ, CHECKPOINT_NPZ, PROD_NPZ] if os.path.exists(p)]
+    warm_candidates = [p for p in [CAND_ACTIVE_NPZ, MASTERED_070_NPZ, MASTERED_060_NPZ, MASTERED_050_NPZ, MASTERED_040_NPZ, CHECKPOINT_NPZ, PROD_NPZ] if os.path.exists(p)]
     if warm_candidates:
         latest_ckpt = max(warm_candidates, key=os.path.getmtime)
         try:
@@ -648,7 +652,13 @@ def main():
     t_compile = time.time()
 
     N_TOTAL_UPDATES = 2000
-    if os.path.exists(MASTERED_060_NPZ):
+    if os.path.exists(MASTERED_080_NPZ):
+        current_push_target = 0.90
+        print("[+] Checkpoint 0.80 m/s Mastered found! Resuming curriculum directly at PUSH: 0.90 m/s.", flush=True)
+    elif os.path.exists(MASTERED_070_NPZ):
+        current_push_target = 0.80
+        print("[+] Checkpoint 0.70 m/s Mastered found! Resuming curriculum directly at PUSH: 0.80 m/s with Unconstrained 12-DoF Stepping.", flush=True)
+    elif os.path.exists(MASTERED_060_NPZ):
         current_push_target = 0.70
         print("[+] Checkpoint 0.60 m/s Mastered found! Resuming curriculum directly at PUSH: 0.70 m/s with Unconstrained 12-DoF Stepping.", flush=True)
     elif os.path.exists(MASTERED_050_NPZ):
@@ -797,6 +807,10 @@ def main():
             cand_save = "/mnt/c/Users/prajval/robotics/cyrus/checkpoints/candidate_balance_active.npz"
             np.savez(cand_save, **np_dict)
             np.savez(CHECKPOINT_NPZ, **np_dict)
+
+        # Periodic garbage collection to maintain clean RAM & prevent WSL swap thrashing
+        import gc
+        gc.collect()
 
 if __name__ == "__main__":
     main()
