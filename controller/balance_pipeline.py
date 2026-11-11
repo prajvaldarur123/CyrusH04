@@ -23,8 +23,8 @@ import mujoco
 # ============================================================================
 
 ACTION_SCALE_VEC = np.array([
-    0.10, 0.10, 0.25, 0.25, 0.20, 0.10,  # Right: yaw, roll, pitch, knee, ank_pitch, ank_roll
-    0.10, 0.10, 0.25, 0.25, 0.20, 0.10   # Left:  yaw, roll, pitch, knee, ank_pitch, ank_roll
+    0.15, 0.15, 0.50, 0.60, 0.35, 0.15,  # Right: yaw, roll, pitch, knee, ank_pitch, ank_roll
+    0.15, 0.15, 0.50, 0.60, 0.35, 0.15   # Left:  yaw, roll, pitch, knee, ank_pitch, ank_roll
 ], dtype=np.float32)
 
 ACTION_SCALE_FLAT = np.full(12, 0.14, dtype=np.float32)

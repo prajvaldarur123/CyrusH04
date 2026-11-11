@@ -201,31 +201,6 @@ class BalanceTester:
                 self.model.actuator_ctrlrange[:, 0],
                 self.model.actuator_ctrlrange[:, 1]
             )
-
-            # Dynamic Stepping: When Capture Point breaches foot limits, swing leg takes an unconstrained recovery step
-            mujoco.mj_subtreeVel(self.model, self.data)
-            com_pos = self.data.subtree_com[self.pelvis_id].copy()
-            com_vel = self.data.subtree_linvel[self.pelvis_id].copy()
-            r_sole = self.data.site_xpos[self.r_sole_id].copy()
-            l_sole = self.data.site_xpos[self.l_sole_id].copy()
-            r_contact = bool(r_sole[2] < 0.045)
-            l_contact = bool(l_sole[2] < 0.045)
-            cur_time = step * dt_ctrl
-
-            step_info = self.stepping_ctrl.update(
-                cur_time, com_pos, com_vel, r_sole, l_sole, r_contact, l_contact
-            )
-            if step_info["state"] == SteppingState.SWING_EXECUTION:
-                swing_leg = step_info["swing_leg"]
-                foot_target = step_info["desired_foot_pos"]
-                hip_id = self.r_hip_id if swing_leg == "right" else self.l_hip_id
-                hip_pos = self.data.xpos[hip_id].copy()
-                q_swing = self.stepping_ctrl.inverse_kinematics_leg(hip_pos, foot_target)
-                if swing_leg == "right":
-                    target_ctrl[:6] = np.clip(q_swing, self.model.actuator_ctrlrange[:6, 0], self.model.actuator_ctrlrange[:6, 1])
-                else:
-                    target_ctrl[6:] = np.clip(q_swing, self.model.actuator_ctrlrange[6:, 0], self.model.actuator_ctrlrange[6:, 1])
-
             self.data.ctrl[:] = target_ctrl
 
             # Physics simulation substeps (e.g. 8 substeps of 0.0025s = 0.02s)

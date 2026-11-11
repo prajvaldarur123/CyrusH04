@@ -59,13 +59,14 @@ EP_STEPS = 500             # 10.0-second episode (500 steps * 0.02s)
 SUBSTEPS = 8               # 8 substeps of 0.0025s = 0.02s (Exact 50 Hz control, zero contact chatter)
 EMA_ALPHA = 0.40           # Tighter action smoothing factor (0.60 * prev + 0.40 * action)
 
-# SOTA Joint-Specific Action Scaling Vector (12 DOFs)
-# Pitch & Knee: ±0.25 rad (±14.3°) for maximum push recovery
-# Ankle Pitch:  ±0.20 rad (±11.5°) for strong ground push-off
-# Roll & Yaw:   ±0.10 rad (±5.7°) for stiff upright roll stability
+# Full Stepping Authority Action Scaling Vector (12 DOFs)
+# Knee: ±0.60 rad (±34.4°) for true 8-10cm foot clearance swing
+# Pitch: ±0.50 rad (±28.6°) for 20-30cm step placement
+# Ankle Pitch: ±0.35 rad (±20.0°) for dynamic toe push-off / heel strike
+# Roll & Yaw: ±0.15 rad (±8.6°) for lateral balance & clearance
 ACTION_SCALE_VEC = jnp.array([
-    0.10, 0.10, 0.25, 0.25, 0.20, 0.10,  # Right: yaw, roll, pitch, knee, ank_pitch, ank_roll
-    0.10, 0.10, 0.25, 0.25, 0.20, 0.10   # Left:  yaw, roll, pitch, knee, ank_pitch, ank_roll
+    0.15, 0.15, 0.50, 0.60, 0.35, 0.15,  # Right: yaw, roll, pitch, knee, ank_pitch, ank_roll
+    0.15, 0.15, 0.50, 0.60, 0.35, 0.15   # Left:  yaw, roll, pitch, knee, ank_pitch, ank_roll
 ], dtype=jnp.float32)
 
 XML_PATH = "/mnt/c/Users/prajval/robotics/cyrus/models/cyrus_12dof_mjx.xml"
@@ -264,9 +265,9 @@ def compute_reward(d: mjx.Data, action: jnp.ndarray, prev_act: jnp.ndarray) -> j
     l_contact = jnp.where(l_sole_z < 0.045, 1.0, 0.0)
 
     # Mode 1 (Mild Push, needs_step == False): Enforce bilateral flat quiet stance
-    # Mode 2 (Violent Push, needs_step == True): Mute foot-lift penalty & allow swing leg movement!
+    # Mode 2 (Violent Push, needs_step == True): Completely liberate swing leg from pose penalties!
     p_load_asym = jnp.where(needs_step, 0.0, 0.0100 * jnp.square(r_sole_z - l_sole_z))
-    p_pose = jnp.where(needs_step, 0.0020, 0.0120) * jnp.sum(jnp.square(leg_qpos - ctrl_nom))
+    p_pose = jnp.where(needs_step, 0.0002, 0.0120) * jnp.sum(jnp.square(leg_qpos - ctrl_nom))
 
     # Planted Stance Foot Slip Penalty (Only punish slip on the planted support foot when stepping)
     p_slip = jnp.where(
@@ -293,11 +294,11 @@ def compute_reward(d: mjx.Data, action: jnp.ndarray, prev_act: jnp.ndarray) -> j
     swing_y = jnp.where(swing_is_right, r_sole_y, l_sole_y)
     swing_z = jnp.where(swing_is_right, r_sole_z, l_sole_z)
 
-    # Stepping Rewards (Awarded only when stepping is physically triggered)
+    # Stepping Rewards (Heavily weighted to dominate standing when pushed violently)
     r_land_x = jnp.exp(-jnp.square(swing_x - x_target) / 0.020)
     r_land_y = jnp.exp(-jnp.square(swing_y - y_target_safe) / 0.020)
-    r_clear = jnp.exp(-jnp.square(swing_z - 0.070) / 0.003)
-    r_step = jnp.where(needs_step, 0.030 * r_land_x + 0.015 * r_land_y + 0.015 * r_clear, 0.0)
+    r_clear = jnp.exp(-jnp.square(swing_z - 0.080) / 0.004) # Target 8cm high clear foot lift
+    r_step = jnp.where(needs_step, 0.150 * r_land_x + 0.080 * r_land_y + 0.100 * r_clear, 0.0)
 
     # Instantaneous Capture Point (ICP) centering reward
     icp_dist = jnp.hypot(d.qvel[0] / omega_0, d.qvel[1] / omega_0)

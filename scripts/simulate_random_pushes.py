@@ -166,31 +166,6 @@ def run_random_pushes(speed_mps: float, num_pushes: int, checkpoint_path: str, r
                 m.actuator_ctrlrange[:, 0],
                 m.actuator_ctrlrange[:, 1]
             )
-
-            # Dynamic Stepping Integration: analytical 6-DoF IK swing trajectory when Capture Point breaches limits
-            mujoco.mj_subtreeVel(m, d)
-            com_pos = d.subtree_com[pelvis_id].copy()
-            com_vel = d.subtree_linvel[pelvis_id].copy()
-            r_sole = d.site_xpos[r_sole_id].copy()
-            l_sole = d.site_xpos[l_sole_id].copy()
-            r_contact = bool(r_sole[2] < 0.045)
-            l_contact = bool(l_sole[2] < 0.045)
-            cur_time = step * dt_ctrl
-
-            step_info = stepping_ctrl.update(
-                cur_time, com_pos, com_vel, r_sole, l_sole, r_contact, l_contact
-            )
-            if step_info["state"] == SteppingState.SWING_EXECUTION:
-                swing_leg = step_info["swing_leg"]
-                foot_target = step_info["desired_foot_pos"]
-                hip_id = r_hip_id if swing_leg == "right" else l_hip_id
-                hip_pos = d.xpos[hip_id].copy()
-                q_swing = stepping_ctrl.inverse_kinematics_leg(hip_pos, foot_target)
-                if swing_leg == "right":
-                    target_ctrl[:6] = np.clip(q_swing, m.actuator_ctrlrange[:6, 0], m.actuator_ctrlrange[:6, 1])
-                else:
-                    target_ctrl[6:] = np.clip(q_swing, m.actuator_ctrlrange[6:, 0], m.actuator_ctrlrange[6:, 1])
-
             d.ctrl[:] = target_ctrl
 
             substeps = int(round(dt_ctrl / dt_physics))
