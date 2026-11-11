@@ -1,0 +1,36 @@
+{
+  "version": "1.0.0",
+  "created_at": "2026-11-11T18:05:00Z",
+  "active_production": {
+    "file": "balance_12dof_production.npz",
+    "sha256": "fc4fda14c82a95dccfd1fc0dcecd2f44e8769c0156cf947bae3aef4902c35b44",
+    "description": "Baseline zero-action quiescent PD baseline"
+  },
+  "legacy_production": {
+    "file": "balance_12dof_production_old_legacy.npz",
+    "sha256": "ae93070c99f772989fc44a44a97158f64d04787e920181d9ee6bfe60e7453f98",
+    "description": "Legacy trained policy (total norm 19.96, action norm 3.48)"
+  },
+  "registered_checkpoints": {
+    "balance_12dof_production.npz": {
+      "sha256": "fc4fda14c82a95dccfd1fc0dcecd2f44e8769c0156cf947bae3aef4902c35b44",
+      "size_bytes": 284918
+    },
+    "balance_12dof_weights.npz": {
+      "sha256": "fc4fda14c82a95dccfd1fc0dcecd2f44e8769c0156cf947bae3aef4902c35b44",
+      "size_bytes": 284918
+    },
+    "balance_12dof_clean_quiescent.npz": {
+      "sha256": "fc4fda14c82a95dccfd1fc0dcecd2f44e8769c0156cf947bae3aef4902c35b44",
+      "size_bytes": 284918
+    },
+    "balance_12dof_production_old_legacy.npz": {
+      "sha256": "ae93070c99f772989fc44a44a97158f64d04787e920181d9ee6bfe60e7453f98",
+      "size_bytes": 263716
+    },
+    "balance_12dof_weights_old_legacy.npz": {
+      "sha256": "ae93070c99f772989fc44a44a97158f64d04787e920181d9ee6bfe60e7453f98",
+      "size_bytes": 263716
+    }
+  }
+}
