@@ -1760,5 +1760,44 @@
     "status": "[CERTIFIED PRODUCTION BASELINE]",
     "timestamp": 1794380999.4341834,
     "time_recorded": "2026-11-11 12:40:00"
+  },
+  {
+    "iteration": 20,
+    "push_mps": 0.4,
+    "standing_pct": 99.90234375,
+    "mean_height": 0.822093665599823,
+    "mean_tilt_deg": 5.924951553344727,
+    "mean_effort": 11.661043167114258,
+    "balance_score": 86.67963409423828,
+    "status": "[MASTERY ACHIEVED 0.40 m/s]",
+    "candidate_checkpoint": "/mnt/c/Users/prajval/robotics/cyrus/checkpoints/candidate_balance_0.40ms.npz",
+    "timestamp": 1794408202.4957564,
+    "time_recorded": "2026-11-11 14:43:22"
+  },
+  {
+    "iteration": 20,
+    "push_mps": 0.5,
+    "standing_pct": 99.0234375,
+    "mean_height": 0.8236098289489746,
+    "mean_tilt_deg": 4.698297500610352,
+    "mean_effort": 4.300610065460205,
+    "balance_score": 90.28018188476562,
+    "status": "[MASTERY ACHIEVED 0.50 m/s]",
+    "candidate_checkpoint": "/mnt/c/Users/prajval/robotics/cyrus/checkpoints/candidate_balance_0.50ms.npz",
+    "timestamp": 1794410635.581183,
+    "time_recorded": "2026-11-11 15:23:55"
+  },
+  {
+    "iteration": 20,
+    "push_mps": 0.6,
+    "standing_pct": 97.75390625,
+    "mean_height": 0.8218311667442322,
+    "mean_tilt_deg": 5.919543266296387,
+    "mean_effort": 5.20418119430542,
+    "balance_score": 87.02433776855469,
+    "status": "[MASTERY ACHIEVED 0.60 m/s]",
+    "candidate_checkpoint": "/mnt/c/Users/prajval/robotics/cyrus/checkpoints/candidate_balance_0.60ms.npz",
+    "timestamp": 1794412174.6287541,
+    "time_recorded": "2026-11-11 15:49:34"
   }
 ]

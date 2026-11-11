@@ -56,8 +56,8 @@ ENT_COEF = 0.001           # Entropy regularization coefficient
 VF_COEF = 0.50             # Value function loss weight
 MAX_GRAD_NORM = 0.50       # Global gradient clipping norm
 EP_STEPS = 500             # 10.0-second episode (500 steps * 0.02s)
-SUBSTEPS = 4               # 4 substeps of 0.005s = 0.02s (Exact 50 Hz control)
-EMA_ALPHA = 0.65           # Action smoothing factor (0.35 * prev + 0.65 * action)
+SUBSTEPS = 8               # 8 substeps of 0.0025s = 0.02s (Exact 50 Hz control, zero contact chatter)
+EMA_ALPHA = 0.40           # Tighter action smoothing factor (0.60 * prev + 0.40 * action)
 
 # SOTA Joint-Specific Action Scaling Vector (12 DOFs)
 # Pitch & Knee: ±0.25 rad (±14.3°) for maximum push recovery
@@ -71,18 +71,32 @@ ACTION_SCALE_VEC = jnp.array([
 XML_PATH = "/mnt/c/Users/prajval/robotics/cyrus/models/cyrus_12dof_mjx.xml"
 CHECKPOINT_NPZ = "/mnt/c/Users/prajval/robotics/cyrus/checkpoints/balance_12dof_weights.npz"
 PROD_NPZ = "/mnt/c/Users/prajval/robotics/cyrus/checkpoints/balance_12dof_production.npz"
+MASTERED_040_NPZ = "/mnt/c/Users/prajval/robotics/cyrus/checkpoints/cyrus_balance_0.40ms_mastered.npz"
+MASTERED_050_NPZ = "/mnt/c/Users/prajval/robotics/cyrus/checkpoints/cyrus_balance_0.50ms_mastered.npz"
+MASTERED_060_NPZ = "/mnt/c/Users/prajval/robotics/cyrus/checkpoints/cyrus_balance_0.60ms_mastered.npz"
 
 print("=" * 80, flush=True)
 print("CYRUS HUMANOID -- SOTA FAST 50 HZ GPU SWARM BALANCE ENGINE", flush=True)
 print(f"JAX Backend: {jax.default_backend()} | Devices: {jax.devices()}", flush=True)
 print(f"Swarm Size: {N_ENVS} Humanoids | Transitions / Update: {N_ENVS * ROLLOUT_STEPS:,}", flush=True)
-print(f"Control Rate: 50 Hz (dt=0.005s, 4 substeps) | Horizon: 10.0s (500 steps)", flush=True)
+print(f"Control Rate: 50 Hz (dt=0.0025s, 8 substeps) | Horizon: 10.0s (500 steps)", flush=True)
 print("=" * 80, flush=True)
 
 # ---------------------------------------------------------------------------
 # MuJoCo MJX Model Initialization
 # ---------------------------------------------------------------------------
 m = mujoco.MjModel.from_xml_path(XML_PATH)
+m.opt.timestep = 0.0025  # Converged 2.5ms physics timestep (eliminates contact chatter)
+
+# Configure robust roll stiffness gains
+for side in ["right", "left"]:
+    m.actuator(f"{side}_hip_roll_act").gainprm[0] = 500.0
+    m.actuator(f"{side}_hip_roll_act").biasprm[1] = -500.0
+    m.actuator(f"{side}_hip_roll_act").biasprm[2] = -35.0
+    m.actuator(f"{side}_ankle_roll_act").gainprm[0] = 400.0
+    m.actuator(f"{side}_ankle_roll_act").biasprm[1] = -400.0
+    m.actuator(f"{side}_ankle_roll_act").biasprm[2] = -25.0
+
 mx = mjx.put_model(m)
 
 torso_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, "torso_upper")
@@ -92,21 +106,21 @@ l_sole_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_SITE, "left_sole")
 ctrl_min = jnp.array(m.actuator_ctrlrange[:, 0])
 ctrl_max = jnp.array(m.actuator_ctrlrange[:, 1])
 
-# Calibrated nominal standing joint angles
+# Calibrated nominal standing joint angles -- Pose C (Athletic Stance)
 ctrl_nom_np = np.zeros(12, dtype=np.float32)
-ctrl_nom_np[3] = 0.05    # right knee
-ctrl_nom_np[2] = -0.04   # right hip pitch
-ctrl_nom_np[4] = -0.01   # right ankle pitch
-ctrl_nom_np[9] = 0.05    # left knee
-ctrl_nom_np[8] = -0.04   # left hip pitch
-ctrl_nom_np[10] = -0.01  # left ankle pitch
+ctrl_nom_np[2] = -0.175  # right hip pitch
+ctrl_nom_np[3] = 0.350   # right knee
+ctrl_nom_np[4] = -0.175  # right ankle pitch
+ctrl_nom_np[8] = -0.175  # left hip pitch
+ctrl_nom_np[9] = 0.350   # left knee
+ctrl_nom_np[10] = -0.175 # left ankle pitch
 ctrl_nom = jnp.array(ctrl_nom_np)
 
 leg_qpos_adr = jnp.arange(7, 19, dtype=jnp.int32)
 leg_qvel_adr = jnp.arange(6, 18, dtype=jnp.int32)
 
 qpos_stand_np = np.zeros(m.nq, dtype=np.float32)
-qpos_stand_np[2] = 0.84  # Pelvis height 0.84m
+qpos_stand_np[2] = 0.825  # Pelvis height 0.825m (Pose C Athletic Stance)
 qpos_stand_np[3] = 1.0   # Upright quaternion
 qpos_stand_np[leg_qpos_adr] = ctrl_nom_np
 qpos_stand = jnp.array(qpos_stand_np)
@@ -143,11 +157,11 @@ class AsymmetricActorCritic(nn.Module):
         self.vf_out = nn.Dense(1, kernel_init=nn.initializers.orthogonal(1.0))
 
     def __call__(self, obs_actor, obs_critic):
-        # Actor forward pass
+        # Actor forward pass: Independent 12-DoF control enabling asymmetric leg stepping
         x = nn.tanh(self.pi_fc1(obs_actor))
         x = nn.tanh(self.pi_fc2(x))
         raw_mu = self.pi_out(x)
-        mu = jnp.clip(enforce_bilateral_symmetry(raw_mu), -1.0, 1.0)
+        mu = jnp.clip(raw_mu, -1.0, 1.0)
 
         # Critic forward pass
         v = nn.tanh(self.vf_fc1(obs_critic))
@@ -206,47 +220,114 @@ def compute_reward(d: mjx.Data, action: jnp.ndarray, prev_act: jnp.ndarray) -> j
     roll_vel = d.qvel[3]
     leg_qpos = d.qpos[leg_qpos_adr]
 
-    # Positive posture & upright incentives
-    r_height = jnp.exp(-jnp.square(pelvis_z - 0.84) / 0.015)
+    # Positive posture & upright incentives (Pose C Nominal Height 0.825m)
+    r_height = jnp.exp(-jnp.square(pelvis_z - 0.825) / 0.015)
     r_upright = jnp.exp(-jnp.square(1.0 - torso_up) / 0.005)   # Variance 0.005 strictly penalizes > 1.5 deg tilt
     r_stay = jnp.exp(-jnp.square(lin_vel_xy) / 0.15)
     r_alive = 1.0
 
-    # Biomechanical Invariant 1: Instantaneous Capture Point (ICP) tracking
-    omega_0 = 3.538  # natural inverted pendulum frequency sqrt(g / z_com)
+    # -----------------------------------------------------------------------
+    # Universal 360° Human-Like Balance & Dynamic Stepping Engine
+    # -----------------------------------------------------------------------
+    omega_0 = 3.538  # Natural inverted pendulum frequency sqrt(g / z_com)
+    xi_x = d.qpos[0] + (d.qvel[0] / omega_0)
+    xi_y = d.qpos[1] + (d.qvel[1] / omega_0)
+
+    # Foot sole positions
+    r_sole_x = d.site_xpos[r_sole_id, 0]
+    r_sole_y = d.site_xpos[r_sole_id, 1]
+    r_sole_z = d.site_xpos[r_sole_id, 2]
+
+    l_sole_x = d.site_xpos[l_sole_id, 0]
+    l_sole_y = d.site_xpos[l_sole_id, 1]
+    l_sole_z = d.site_xpos[l_sole_id, 2]
+
+    # Universal Capture Point Trigger Boundaries
+    # Forward toe (+0.14m), Backward heel (-0.06m), Lateral bounds (+-0.15m)
+    needs_step_fwd   = xi_x > 0.140
+    needs_step_bwd   = xi_x < -0.060
+    needs_step_left  = xi_y > 0.150
+    needs_step_right = xi_y < -0.150
+    needs_step = needs_step_fwd | needs_step_bwd | needs_step_left | needs_step_right
+
+    # Universal Swing Leg Selection (Human Reflex):
+    # Lateral push: step with side pushed toward (left if pushed left, right if pushed right)
+    # Sagittal push: step forward/backward with leading foot
+    swing_is_right = jnp.where(
+        jnp.abs(xi_y) > 0.050,
+        xi_y < 0.0,
+        d.qvel[0] > 0.0
+    )
+
+    # Foot contact states
+    r_contact = jnp.where(r_sole_z < 0.045, 1.0, 0.0)
+    l_contact = jnp.where(l_sole_z < 0.045, 1.0, 0.0)
+
+    # Mode 1 (Mild Push, needs_step == False): Enforce bilateral flat quiet stance
+    # Mode 2 (Violent Push, needs_step == True): Mute foot-lift penalty & allow swing leg movement!
+    p_load_asym = jnp.where(needs_step, 0.0, 0.0100 * jnp.square(r_sole_z - l_sole_z))
+    p_pose = jnp.where(needs_step, 0.0020, 0.0120) * jnp.sum(jnp.square(leg_qpos - ctrl_nom))
+
+    # Planted Stance Foot Slip Penalty (Only punish slip on the planted support foot when stepping)
+    p_slip = jnp.where(
+        needs_step,
+        jnp.where(swing_is_right,
+                  0.0100 * l_contact * jnp.sum(jnp.square(d.qvel[16:18])),
+                  0.0100 * r_contact * jnp.sum(jnp.square(d.qvel[10:12]))),
+        0.0100 * (r_contact * jnp.sum(jnp.square(d.qvel[10:12])) + l_contact * jnp.sum(jnp.square(d.qvel[16:18])))
+    )
+
+    # Stepping Guidance Reward: 3D Target Landing & Smooth Foot Clearance
+    x_target = xi_x + 0.050 * d.qvel[0]
+    y_target = xi_y + 0.050 * d.qvel[1]
+    
+    # Enforce minimum foot clearance to prevent self-collision
+    min_sep = 0.100
+    y_target_safe = jnp.where(
+        swing_is_right,
+        jnp.minimum(y_target, l_sole_y - min_sep),
+        jnp.maximum(y_target, r_sole_y + min_sep)
+    )
+
+    swing_x = jnp.where(swing_is_right, r_sole_x, l_sole_x)
+    swing_y = jnp.where(swing_is_right, r_sole_y, l_sole_y)
+    swing_z = jnp.where(swing_is_right, r_sole_z, l_sole_z)
+
+    # Stepping Rewards (Awarded only when stepping is physically triggered)
+    r_land_x = jnp.exp(-jnp.square(swing_x - x_target) / 0.020)
+    r_land_y = jnp.exp(-jnp.square(swing_y - y_target_safe) / 0.020)
+    r_clear = jnp.exp(-jnp.square(swing_z - 0.070) / 0.003)
+    r_step = jnp.where(needs_step, 0.030 * r_land_x + 0.015 * r_land_y + 0.015 * r_clear, 0.0)
+
+    # Instantaneous Capture Point (ICP) centering reward
     icp_dist = jnp.hypot(d.qvel[0] / omega_0, d.qvel[1] / omega_0)
     r_icp = jnp.exp(-jnp.square(icp_dist) / 0.05)
 
-    # Biomechanical Invariant 2: Bilateral Foot Load Balance
-    r_sole_z = d.site_xpos[r_sole_id, 2]
-    l_sole_z = d.site_xpos[l_sole_id, 2]
-    p_load_asym = 0.0100 * jnp.square(r_sole_z - l_sole_z)
-
-    # Biomechanical Invariant 3: Foot Slip Suppression (no ground scooting)
-    r_contact = jnp.where(r_sole_z < 0.045, 1.0, 0.0)
-    l_contact = jnp.where(l_sole_z < 0.045, 1.0, 0.0)
-    p_slip = 0.0100 * (r_contact * jnp.sum(jnp.square(d.qvel[10:12])) + l_contact * jnp.sum(jnp.square(d.qvel[16:18])))
-
     # Active pitch/roll damping & nominal posture anchor
-    p_pitch = 0.0080 * jnp.square(pitch_vel)                   # Actively damps sagittal pitch oscillations
-    p_roll = 0.0040 * jnp.square(roll_vel)                     # Actively damps lateral sway
+    p_pitch = 0.0180 * jnp.square(pitch_vel)                   # Sagittal pitch damping
+    p_roll = 0.0100 * jnp.square(roll_vel)                     # Lateral roll damping
     p_act_rate = 0.0020 * jnp.sum(jnp.square(action - prev_act))
-    p_act_mag = 0.0020 * jnp.sum(jnp.square(action))           # Enforces zero-action quiet stance
+    p_act_mag = 0.0015 * jnp.sum(jnp.square(action))           # Balanced action magnitude penalty
     p_vz = 0.0050 * jnp.square(d.qvel[2])
-    p_pose = 0.0100 * jnp.sum(jnp.square(leg_qpos - ctrl_nom)) # Strong anchor to nominal stance
-    p_squat = jnp.where(pelvis_z < 0.80, 0.50 * jnp.square(0.80 - pelvis_z) * 100.0, 0.0)
+    p_squat = jnp.where(pelvis_z < 0.75, 0.50 * jnp.square(0.75 - pelvis_z) * 100.0, 0.0)
+
+    # Deadband tilt penalty: zero penalty <= 1.5 deg; quadratically penalizes tilt > 1.5 deg
+    tilt_rad = jnp.arccos(jnp.clip(torso_up, -1.0, 1.0))
+    tilt_deg = tilt_rad * (180.0 / jnp.pi)
+    p_tilt_excess = 0.025 * jnp.square(jnp.maximum(0.0, tilt_deg - 1.5))
 
     step_rew = (
         0.020 * r_height +
-        0.035 * r_upright +
+        0.040 * r_upright +
         0.020 * r_icp +
         0.015 * r_alive +
-        0.010 * r_stay -
-        p_pitch - p_roll - p_act_rate - p_act_mag - p_vz - p_pose - p_squat - p_load_asym - p_slip
+        0.010 * r_stay +
+        r_step -
+        p_pitch - p_roll - p_act_rate - p_act_mag - p_vz - p_pose - p_squat - p_load_asym - p_slip - p_tilt_excess
     )
 
-    # Catastrophic fall penalty
-    is_fall = (pelvis_z < 0.70) | (torso_up < 0.75)
+    # Catastrophic fall penalty: cos(30 deg) = 0.866 strict threshold
+    is_fall = (pelvis_z < 0.70) | (torso_up < 0.866)
     fall_pen = jnp.where(is_fall, -20.0, 0.0)
     return step_rew + fall_pen
 
@@ -299,8 +380,8 @@ def single_step(d, action, prev_act, step_cnt, push_vec, push_mag, rng):
 
     priv = get_priv_obs(next_d, push_applied)
 
-    # Separation of Terminal (Fall) vs Truncation (Timeout)
-    is_fall = (next_d.qpos[2] < 0.70) | (next_d.xmat[torso_id, 2, 2] < 0.75)
+    # Separation of Terminal (Fall) vs Truncation (Timeout): cos(30 deg) = 0.866
+    is_fall = (next_d.qpos[2] < 0.70) | (next_d.xmat[torso_id, 2, 2] < 0.866)
     is_timeout = (step_cnt >= EP_STEPS)
     is_done = is_fall | is_timeout
 
@@ -478,7 +559,7 @@ def train_iteration(ts, d_batch, obs_act_batch, acts_batch, steps_batch, priv_ba
 
     # Balance Quality Score (0 to 100)
     score_surv = standing_pct * 0.50
-    score_height = jnp.exp(-jnp.square(mean_height - 0.84) / 0.01) * 25.0
+    score_height = jnp.exp(-jnp.square(mean_height - 0.825) / 0.01) * 25.0
     score_tilt = jnp.exp(-jnp.square(mean_tilt_deg) / 25.0) * 15.0
     score_effort = jnp.clip(1.0 - (mean_effort / 100.0), 0.0, 1.0) * 10.0
     balance_quality_score = score_surv + score_height + score_tilt + score_effort
@@ -511,7 +592,7 @@ def main():
     params = model.init(rng, init_obs_act, init_obs_crit)["params"]
 
     # Warm-start from latest active or production checkpoint
-    warm_candidates = [p for p in [CHECKPOINT_NPZ, PROD_NPZ] if os.path.exists(p)]
+    warm_candidates = [p for p in [MASTERED_060_NPZ, MASTERED_050_NPZ, MASTERED_040_NPZ, CHECKPOINT_NPZ, PROD_NPZ] if os.path.exists(p)]
     if warm_candidates:
         latest_ckpt = max(warm_candidates, key=os.path.getmtime)
         try:
@@ -559,22 +640,29 @@ def main():
     start_time = time.time()
 
     print("[>>>] Swarm Online: 1,024 Humanoids on GPU.", flush=True)
-    print("[>>>] 50 Hz Synchronized Loop Active: 4 Substeps per Action (True 10.0s Episode).", flush=True)
+    print("[>>>] 50 Hz Synchronized Loop Active: 8 Substeps per Action (dt=0.0025s, True 10.0s Episode).", flush=True)
     print("[>>>] Multi-Epoch PPO Engine: 2 Epochs x 4 Mini-Batches (8x Gradient Updates / Iteration).", flush=True)
     print("[>>>] Joint-Specific Action Scaling Active (Pitch: ±14.3°, Knee: ±14.3°, Ankles: ±11.5°).", flush=True)
     print("[>>>] JIT Compiling Parallel Asymmetric XLA Kernels... (Takes ~20s on first iteration)\n", flush=True)
     t_compile = time.time()
 
     N_TOTAL_UPDATES = 2000
-    current_push_target = 0.30
+    if os.path.exists(MASTERED_060_NPZ):
+        current_push_target = 0.70
+        print("[+] Checkpoint 0.60 m/s Mastered found! Resuming curriculum directly at PUSH: 0.70 m/s with Unconstrained 12-DoF Stepping.", flush=True)
+    elif os.path.exists(MASTERED_050_NPZ):
+        current_push_target = 0.60
+        print("[+] Checkpoint 0.50 m/s Mastered found! Resuming curriculum directly at PUSH: 0.60 m/s.", flush=True)
+    else:
+        current_push_target = 0.50
     consecutive_survivals = 0
     TARGET_CONSECUTIVE = 20
 
     for update in range(1, N_TOTAL_UPDATES + 1):
         push_mag = jnp.float32(current_push_target)
 
-        # Dynamic Exploration Noise Decay (0.15 -> 0.08 across first 100 updates)
-        noise_std_float = max(0.08, 0.15 - (update / 100.0) * 0.07)
+        # Dynamic Exploration Noise Decay: drops rapidly from 0.08 -> 0.04 to eliminate jitter
+        noise_std_float = max(0.04, 0.08 * (0.96 ** (update - 1)))
         noise_std = jnp.float32(noise_std_float)
 
         t0 = time.time()
@@ -628,14 +716,14 @@ def main():
         promo_pct = int((consecutive_survivals / float(TARGET_CONSECUTIVE)) * 100.0)
         filled = int((consecutive_survivals / float(TARGET_CONSECUTIVE)) * 20)
         bar_str = "[" + "█" * filled + "░" * (20 - filled) + f"] {consecutive_survivals} / {TARGET_CONSECUTIVE} ({promo_pct}%)"
-        next_promo = f"{current_push_target + 0.10:.2f} m/s" if current_push_target < 0.45 else "Mastery"
+        next_promo = f"{current_push_target + 0.10:.2f} m/s" if current_push_target < 0.85 else "0.90 m/s Mastery"
 
         print("=" * 80, flush=True)
         print(f"| ITERATION {update:3d} (1,024 Humanoids in {iter_dur:.1f}s) | PUSH: {current_push_target:.2f} m/s | STREAK: {consecutive_survivals:2d} / {TARGET_CONSECUTIVE} PASSES", flush=True)
         print("=" * 80, flush=True)
         print(f"  [✓] Swarm Stance:             {num_std:4d} / 1,024 Humanoids PASSED ({std_pct:5.1f}%)", flush=True)
         print(f"  [🧭] Directional Stability:    [Front: {surv_f:3.0f}% | Back: {surv_b:3.0f}% | Left: {surv_l:3.0f}% | Right: {surv_r:3.0f}%]", flush=True)
-        print(f"  [📏] Posture Health:          Height: {height:.3f}m (Nominal: 0.84m) | Tilt: {tilt:.1f}°", flush=True)
+        print(f"  [📏] Posture Health:          Height: {height:.3f}m (Nominal: 0.825m) | Tilt: {tilt:.1f}°", flush=True)
         print(f"  [⚡] Motor Stress / Effort:    {effort:4.1f}% ({effort_desc})", flush=True)
         print(f"  [★] Balance Quality Score:    {score:4.1f} / 100 ({score_grade})", flush=True)
         print(f"  [🎯] {next_promo} Promotion:      {bar_str}", flush=True)
@@ -643,7 +731,7 @@ def main():
         print("=" * 80 + "\n", flush=True)
         print("=" * 80 + "\n", flush=True)
 
-        # Mastery Progression: Advance push when 20 consecutive successful runs are achieved
+        # Mastery Progression: Advance push when 20 consecutive successful runs are achieved (up to 0.90 m/s)
         if consecutive_survivals >= TARGET_CONSECUTIVE:
             p_cpu = jax.device_get(ts.params)
             np_dict = {
@@ -684,19 +772,15 @@ def main():
             except Exception as e:
                 print(f"[!] Ledger write warning: {e}", flush=True)
 
-            if current_push_target < 0.35:
-                print(f"\n{'*'*80}\n[★ MASTERY ACHIEVED: 0.30 m/s STOOD 20 TIMES CONSECUTIVELY! ★]\nAdvancing push force to 0.40 m/s...\n{'*'*80}\n", flush=True)
-                np.savez("/mnt/c/Users/prajval/robotics/cyrus/checkpoints/cyrus_balance_0.30ms_mastered.npz", **np_dict)
-                current_push_target = 0.40
-                consecutive_survivals = 0
-            elif current_push_target < 0.45:
-                print(f"\n{'*'*80}\n[★ MASTERY ACHIEVED: 0.40 m/s STOOD 20 TIMES CONSECUTIVELY! ★]\nAdvancing push force to 0.50 m/s...\n{'*'*80}\n", flush=True)
-                np.savez("/mnt/c/Users/prajval/robotics/cyrus/checkpoints/cyrus_balance_0.40ms_mastered.npz", **np_dict)
-                current_push_target = 0.50
+            if current_push_target < 0.85:
+                next_target = round(float(current_push_target) + 0.10, 2)
+                print(f"\n{'*'*80}\n[★ MASTERY ACHIEVED: {current_push_target:.2f} m/s STOOD 20 TIMES CONSECUTIVELY! ★]\nAdvancing push force to {next_target:.2f} m/s...\n{'*'*80}\n", flush=True)
+                np.savez(f"/mnt/c/Users/prajval/robotics/cyrus/checkpoints/cyrus_balance_{current_push_target:.2f}ms_mastered.npz", **np_dict)
+                current_push_target = next_target
                 consecutive_survivals = 0
             else:
-                print(f"\n{'*'*80}\n[★ ULTIMATE MASTERY ACHIEVED: 0.50 m/s STOOD 20 TIMES CONSECUTIVELY! ★]\nCyrus has mastered balance recovery across all 360 degrees!\n{'*'*80}\n", flush=True)
-                np.savez("/mnt/c/Users/prajval/robotics/cyrus/checkpoints/cyrus_balance_0.50ms_mastered.npz", **np_dict)
+                print(f"\n{'*'*80}\n[★ ULTIMATE SOTA MASTERY: {current_push_target:.2f} m/s STOOD 20 TIMES CONSECUTIVELY! ★]\nCyrus has mastered universal balance recovery up to 0.90 m/s across all 360 degrees!\n{'*'*80}\n", flush=True)
+                np.savez(f"/mnt/c/Users/prajval/robotics/cyrus/checkpoints/cyrus_balance_{current_push_target:.2f}ms_mastered.npz", **np_dict)
                 consecutive_survivals = 0
 
         if update % 5 == 0 or update == 1:

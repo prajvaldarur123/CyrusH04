@@ -134,7 +134,7 @@ class PolarPushBenchmark:
         h1 = np.tanh(obs_buf @ w["mlp_extractor.policy_net.0.weight"].T + w["mlp_extractor.policy_net.0.bias"])
         h2 = np.tanh(h1 @ w["mlp_extractor.policy_net.2.weight"].T + w["mlp_extractor.policy_net.2.bias"])
         raw = h2 @ w["action_net.weight"].T + w["action_net.bias"]
-        return np.clip(enforce_bilateral_symmetry(raw), -1.0, 1.0)
+        return np.clip(raw, -1.0, 1.0)
 
     def get_obs(self, prev_act):
         d = self.data

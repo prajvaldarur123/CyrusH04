@@ -2,15 +2,16 @@
   "version": "1.1.0",
   "updated_at": "2026-11-11T18:35:00Z",
   "reference_baseline": {
-    "status": "CERTIFIED_PD_BASELINE",
+    "status": "baseline_pd v0-draft",
+    "protocol_tag": "CALIBRATED_40MS_FORCE_PULSE_V1",
     "file": "balance_12dof_production.npz",
     "sha256": "fc4fda14c82a95dccfd1fc0dcecd2f44e8769c0156cf947bae3aef4902c35b44",
-    "description": "Certified Passive PD Baseline holding Pose C with robust roll gains (Hip 500 / Ankle 400). Action layer is zero. Outperformed by no trained candidate yet.",
+    "description": "Reference Passive PD Baseline holding Pose C with robust roll gains (Hip 500 / Ankle 400). Action layer is zero. Uncertified draft reference baseline evaluated under protocol CALIBRATED_40MS_FORCE_PULSE_V1.",
     "realized_limits": {
-      "sagittal_fwd_dv": 0.4452,
-      "sagittal_bwd_dv": 0.4507,
-      "coronal_lat_dv": 0.5062,
-      "diagonal_dv": 0.5524
+      "sagittal_fwd_dv": 0.4046,
+      "sagittal_bwd_dv": 0.4032,
+      "coronal_lat_dv": 0.4996,
+      "diagonal_dv": 0.5543
     }
   },
   "candidate_policies": {
