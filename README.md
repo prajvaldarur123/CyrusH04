@@ -28,6 +28,7 @@ cyrus/
 ├── checkpoints/        # Production weight matrices (.npz) & ledgers
 ├── cad/                # CAD references and dimensional layouts
 ├── benchmark/          # Performance benchmarks and physics tests
+├── docs/               # Technical documentation & web 3D visualizers
 ├── scripts/            # Helper automation and verification tools
 └── tests/              # Unit tests and biomechanical audits
 ```
