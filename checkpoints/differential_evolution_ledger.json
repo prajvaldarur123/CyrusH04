@@ -1799,5 +1799,18 @@
     "candidate_checkpoint": "/mnt/c/Users/prajval/robotics/cyrus/checkpoints/candidate_balance_0.60ms.npz",
     "timestamp": 1794412174.6287541,
     "time_recorded": "2026-11-11 15:49:34"
+  },
+  {
+    "iteration": 20,
+    "push_mps": 0.7,
+    "standing_pct": 91.9921875,
+    "mean_height": 0.8135936856269836,
+    "mean_tilt_deg": 10.613588333129883,
+    "mean_effort": 5.156128883361816,
+    "balance_score": 80.32298278808594,
+    "status": "[MASTERY ACHIEVED 0.70 m/s]",
+    "candidate_checkpoint": "/mnt/c/Users/prajval/robotics/cyrus/checkpoints/candidate_balance_0.70ms.npz",
+    "timestamp": 1794415184.950538,
+    "time_recorded": "2026-11-11 16:39:44"
   }
 ]
