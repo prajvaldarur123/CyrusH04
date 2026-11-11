@@ -27,6 +27,8 @@ ACTION_SCALE_VEC = np.array([
     0.10, 0.10, 0.25, 0.25, 0.20, 0.10   # Left:  yaw, roll, pitch, knee, ank_pitch, ank_roll
 ], dtype=np.float32)
 
+ACTION_SCALE_FLAT = np.full(12, 0.14, dtype=np.float32)
+
 EMA_ALPHA = 0.65
 
 # Nominal Poses (12-DoF lower body)
@@ -74,16 +76,16 @@ def compute_file_sha256(filepath: str) -> str:
 def load_verified_checkpoint(manifest_path: str, checkpoint_key: str = "active_production"):
     """
     Loads checkpoint file verified against checkpoints/manifest.json.
-    Raises ValueError if hash mismatch or file not registered.
+    Raises RuntimeError immediately if hash mismatch or file not registered.
     """
     if not os.path.exists(manifest_path):
-        raise FileNotFoundError(f"Manifest not found: {manifest_path}")
+        raise FileNotFoundError(f"SECURITY AUDIT ERROR: Manifest missing at {manifest_path}")
 
     with open(manifest_path, "r", encoding="utf-8") as f:
         manifest = json.load(f)
 
     if checkpoint_key not in manifest:
-        raise KeyError(f"Key '{checkpoint_key}' not in manifest {manifest_path}")
+        raise KeyError(f"SECURITY AUDIT ERROR: Key '{checkpoint_key}' not registered in manifest {manifest_path}")
 
     entry = manifest[checkpoint_key]
     filename = entry["file"]
@@ -93,14 +95,15 @@ def load_verified_checkpoint(manifest_path: str, checkpoint_key: str = "active_p
     file_path = os.path.join(ckpt_dir, filename)
 
     if not os.path.exists(file_path):
-        raise FileNotFoundError(f"Checkpoint file missing: {file_path}")
+        raise FileNotFoundError(f"SECURITY AUDIT ERROR: Checkpoint file missing: {file_path}")
 
     actual_hash = compute_file_sha256(file_path)
     if actual_hash != expected_hash:
-        raise ValueError(
+        raise RuntimeError(
             f"SECURITY AUDIT FAILURE: Checkpoint hash mismatch for {filename}!\n"
-            f"Expected: {expected_hash}\n"
-            f"Actual:   {actual_hash}"
+            f"Expected SHA-256: {expected_hash}\n"
+            f"Actual SHA-256:   {actual_hash}\n"
+            f"Execution halted to prevent loading corrupted or tampered neural weights."
         )
 
     data = np.load(file_path)
@@ -109,14 +112,21 @@ def load_verified_checkpoint(manifest_path: str, checkpoint_key: str = "active_p
 
 def save_checkpoint_atomic(target_path: str, arrays_dict: dict):
     """
-    Saves an NPZ file atomically using temporary file and atomic replace.
-    Prevents partial/corrupted weights on interruption.
+    Saves an NPZ file atomically using temporary file, fsync, and atomic replace.
+    Guarantees OS-level disk flush before renaming to prevent corrupted weights.
     """
     base, ext = os.path.splitext(target_path)
     extension = ext if ext else ".npz"
     tmp_path = f"{base}_tmp_{os.getpid()}{extension}"
+    
     np.savez(tmp_path, **arrays_dict)
     actual_tmp = tmp_path if tmp_path.endswith(".npz") else tmp_path + ".npz"
+    
+    # Flush and fsync to disk before atomic rename
+    with open(actual_tmp, "rb+") as f:
+        f.flush()
+        os.fsync(f.fileno())
+        
     os.replace(actual_tmp, target_path)
 
 
@@ -305,9 +315,47 @@ def compute_cmp_and_margins(model: mujoco.MjModel, data: mujoco.MjData,
 # 5. STANDARDIZED FALL DETECTOR
 # ============================================================================
 
-def is_robot_fallen(data: mujoco.MjData, thresholds: dict = None) -> tuple:
+def check_zero_action_gate(checkpoint_data, obs_dim: int = 141, batch_size: int = 64) -> tuple:
     """
-    Standardized fall detection check across all testing harnesses.
+    A7 Zero-Action Gate Rule:
+    Evaluates policy weights and verifies that the model is NOT a dummy/quiescent baseline.
+    Rejects candidates where:
+    1. Action layer weights/biases have norm < 1e-5
+    2. Policy output variance across a random test batch is < 1e-6
+    Returns: (passes_gate: bool, action_norm: float, action_var: float, reason: str)
+    """
+    w = checkpoint_data
+    if "action_net.weight" not in w:
+        return False, 0.0, 0.0, "Missing 'action_net.weight' in checkpoint"
+
+    w_act = w["action_net.weight"]
+    b_act = w["action_net.bias"]
+    action_norm = float(np.linalg.norm(w_act) + np.linalg.norm(b_act))
+
+    if action_norm < 1e-5:
+        return False, action_norm, 0.0, f"Action layer norm ({action_norm:.6e}) is ZERO (quiescent baseline)"
+
+    # Test forward variance across synthetic batch
+    rng = np.random.RandomState(42)
+    obs_batch = rng.randn(batch_size, obs_dim).astype(np.float32)
+
+    h1 = np.tanh(obs_batch @ w["mlp_extractor.policy_net.0.weight"].T + w["mlp_extractor.policy_net.0.bias"])
+    h2 = np.tanh(h1 @ w["mlp_extractor.policy_net.2.weight"].T + w["mlp_extractor.policy_net.2.bias"])
+    actions = h2 @ w_act.T + b_act
+    action_var = float(np.mean(np.var(actions, axis=0)))
+
+    if action_var < 1e-6:
+        return False, action_norm, action_var, f"Action variance ({action_var:.6e}) is CONSTANT (dead policy)"
+
+    return True, action_norm, action_var, "PROMOTABLE (Active neural policy)"
+
+
+def is_robot_fallen(model: mujoco.MjModel, data: mujoco.MjData, thresholds: dict = None) -> tuple:
+    """
+    Standardized fall detection check across all testing harnesses:
+    1. Pelvis height Z below min threshold (0.55m)
+    2. Pelvis roll or pitch exceeding max angle (30 deg)
+    3. Non-foot contact check: thighs, pelvis, torso, or knees touching floor
     Returns: (is_fall, reason)
     """
     th = thresholds or STANDARD_FALL_THRESHOLDS
@@ -323,5 +371,19 @@ def is_robot_fallen(data: mujoco.MjData, thresholds: dict = None) -> tuple:
         return True, f"Pelvis roll ({roll:.1f}deg) exceeded {th['max_roll_deg']}deg"
     if abs(pitch) > th["max_pitch_deg"]:
         return True, f"Pelvis pitch ({pitch:.1f}deg) exceeded {th['max_pitch_deg']}deg"
+
+    # Non-foot body contact check with floor (geom 0)
+    for i in range(data.ncon):
+        con = data.contact[i]
+        b1 = model.geom_bodyid[con.geom1]
+        b2 = model.geom_bodyid[con.geom2]
+        # Ignore foot bodies (right_foot, left_foot) and world body (0)
+        for b in [b1, b2]:
+            if b != 0:
+                body_name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, b)
+                if body_name not in ["right_foot", "left_foot", "gaze_target"]:
+                    # Non-foot body touched ground or collided!
+                    if con.geom1 == 0 or con.geom2 == 0:
+                        return True, f"Non-foot body collision ({body_name}) with floor"
 
     return False, "STABLE"
