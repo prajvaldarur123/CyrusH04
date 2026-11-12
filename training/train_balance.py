@@ -432,11 +432,12 @@ def single_step(d, action, prev_act, step_cnt, push_vec, push_mag, rng):
     q_reflex = compute_reflex_step_ctrl(d)
     target_ctrl = jnp.clip(q_reflex + action_filtered * ACTION_SCALE_VEC, ctrl_min, ctrl_max)
 
-    rng, shove_rng, rot_rng, prob_rng, noise_rng = random.split(rng, 5)
+    rng, shove_rng, rot_rng, prob_rng, noise_rng, turb_rng_x, turb_rng_y = random.split(rng, 7)
 
-    # Primary instantaneous shock at step 100 (t=2.0s); Secondary double-tap shock at step 140 (t=2.8s)
-    is_shove_start = (step_cnt == 100) | (step_cnt == 300)
-    is_double_tap = (step_cnt == 140) | (step_cnt == 340)
+    # Hardcore Early Perturbation Regime: Settle 12 steps (0.24s), then shock at step 15 (0.30s)!
+    # Multi-shock cascades at steps 15, 75, 140, 220, 300; secondary double-taps at steps 35, 95, 160, 240
+    is_shove_start = (step_cnt == 15) | (step_cnt == 75) | (step_cnt == 140) | (step_cnt == 220) | (step_cnt == 300)
+    is_double_tap  = (step_cnt == 35) | (step_cnt == 95) | (step_cnt == 160) | (step_cnt == 240)
 
     # Sample new 360-degree instantaneous shove vector
     has_push = random.uniform(prob_rng, ()) < 0.70
@@ -449,15 +450,20 @@ def single_step(d, action, prev_act, step_cnt, push_vec, push_mag, rng):
 
     cur_push_vec = jnp.where(is_shove_start, new_push_vec, push_vec)
 
-    # Instantaneous Dirac-delta velocity impulse injected in single step (t=2.0s & t=2.8s)
+    # Dirac-delta shock impulse
     is_shove_instant = is_shove_start | is_double_tap
     applied_shove = jnp.where(is_shove_instant, cur_push_vec, jnp.zeros(3))
-    push_applied = applied_shove
+
+    # Continuous persistent background turbulence (eliminates statue mode after step 12 contact settling)
+    is_settled = step_cnt >= 12
+    turb_scale = 0.020 * jnp.clip(push_mag, 0.2, 0.8)
+    turb_vx = jnp.where(is_settled, random.normal(turb_rng_x, ()) * turb_scale, 0.0)
+    turb_vy = jnp.where(is_settled, random.normal(turb_rng_y, ()) * turb_scale, 0.0)
 
     d_prep = d.replace(
         ctrl=target_ctrl,
-        qvel=d.qvel.at[0].add(applied_shove[0])
-                   .at[1].add(applied_shove[1])
+        qvel=d.qvel.at[0].add(applied_shove[0] + turb_vx)
+                   .at[1].add(applied_shove[1] + turb_vy)
                    .at[4].add(applied_shove[2])
     )
 
@@ -797,7 +803,7 @@ def run_full_episode_eval(weights, push_mag, num_episodes=16):
 
             for sub in range(SUBSTEPS):
                 cur_sub = round(t + sub * 0.0025, 4)
-                if cur_sub == 2.0:
+                if cur_sub == 0.5:
                     d_eval.qvel[0] += vx
                     d_eval.qvel[1] += vy
                 mujoco.mj_step(m_eval, d_eval)
