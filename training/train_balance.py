@@ -59,15 +59,14 @@ EP_STEPS = 500             # 10.0-second episode (500 steps * 0.02s)
 SUBSTEPS = 8               # 8 substeps of 0.0025s = 0.02s (Exact 50 Hz control, zero contact chatter)
 EMA_ALPHA = 0.40           # Tighter action smoothing factor (0.60 * prev + 0.40 * action)
 
-# Full Stepping Authority Action Scaling Vector (12 DOFs)
-# Knee: ±0.60 rad (±34.4°) for true 8-10cm foot clearance swing
-# Pitch: ±0.50 rad (±28.6°) for 20-30cm step placement
-# Ankle Pitch: ±0.35 rad (±20.0°) for dynamic toe push-off / heel strike
-# Roll & Yaw: ±0.15 rad (±8.6°) for lateral balance & clearance
-ACTION_SCALE_VEC = jnp.array([
-    0.15, 0.15, 0.50, 0.60, 0.35, 0.15,  # Right: yaw, roll, pitch, knee, ank_pitch, ank_roll
-    0.15, 0.15, 0.50, 0.60, 0.35, 0.15   # Left:  yaw, roll, pitch, knee, ank_pitch, ank_roll
+# Residual Reflex Action Scaling Vector (12 DOFs)
+# Residual authority allows RL policy to fine-tune compliance, ground friction, and impact damping
+# on top of the analytical Capture Point stepping baseline.
+RESIDUAL_SCALE_VEC = jnp.array([
+    0.08, 0.08, 0.15, 0.18, 0.12, 0.08,  # Right: yaw, roll, pitch, knee, ank_pitch, ank_roll
+    0.08, 0.08, 0.15, 0.18, 0.12, 0.08   # Left:  yaw, roll, pitch, knee, ank_pitch, ank_roll
 ], dtype=jnp.float32)
+ACTION_SCALE_VEC = RESIDUAL_SCALE_VEC
 
 XML_PATH = "/mnt/c/Users/prajval/robotics/cyrus/models/cyrus_12dof_mjx.xml"
 CHECKPOINT_NPZ = "/mnt/c/Users/prajval/robotics/cyrus/checkpoints/balance_12dof_weights.npz"
@@ -225,35 +224,21 @@ def compute_reward(d: mjx.Data, action: jnp.ndarray, prev_act: jnp.ndarray) -> j
     roll_vel = d.qvel[3]
     leg_qpos = d.qpos[leg_qpos_adr]
 
-    # Positive posture & upright incentives (Pose C Nominal Height 0.825m)
-    r_height = jnp.exp(-jnp.square(pelvis_z - 0.825) / 0.015)
-    r_upright = jnp.exp(-jnp.square(1.0 - torso_up) / 0.005)   # Variance 0.005 strictly penalizes > 1.5 deg tilt
+    # Universal Capture Point Trigger Boundaries
+    # Forward toe (+0.12m), Backward heel (-0.05m), Lateral bounds (+-0.12m)
+    needs_step_fwd   = xi_x > 0.120
+    needs_step_bwd   = xi_x < -0.050
+    needs_step_left  = xi_y > 0.120
+    needs_step_right = xi_y < -0.120
+    needs_step = needs_step_fwd | needs_step_bwd | needs_step_left | needs_step_right
+
+    # Decoupled posture rewards: relax height penalty during active step to allow compliant dip (0.78m)
+    r_height = jnp.where(needs_step,
+                         jnp.exp(-jnp.square(pelvis_z - 0.780) / 0.030),
+                         jnp.exp(-jnp.square(pelvis_z - 0.825) / 0.015))
+    r_upright = jnp.exp(-jnp.square(1.0 - torso_up) / 0.005)
     r_stay = jnp.exp(-jnp.square(lin_vel_xy) / 0.15)
     r_alive = 1.0
-
-    # -----------------------------------------------------------------------
-    # Universal 360° Human-Like Balance & Dynamic Stepping Engine
-    # -----------------------------------------------------------------------
-    omega_0 = 3.538  # Natural inverted pendulum frequency sqrt(g / z_com)
-    xi_x = d.qpos[0] + (d.qvel[0] / omega_0)
-    xi_y = d.qpos[1] + (d.qvel[1] / omega_0)
-
-    # Foot sole positions
-    r_sole_x = d.site_xpos[r_sole_id, 0]
-    r_sole_y = d.site_xpos[r_sole_id, 1]
-    r_sole_z = d.site_xpos[r_sole_id, 2]
-
-    l_sole_x = d.site_xpos[l_sole_id, 0]
-    l_sole_y = d.site_xpos[l_sole_id, 1]
-    l_sole_z = d.site_xpos[l_sole_id, 2]
-
-    # Universal Capture Point Trigger Boundaries
-    # Forward toe (+0.14m), Backward heel (-0.06m), Lateral bounds (+-0.15m)
-    needs_step_fwd   = xi_x > 0.140
-    needs_step_bwd   = xi_x < -0.060
-    needs_step_left  = xi_y > 0.150
-    needs_step_right = xi_y < -0.150
-    needs_step = needs_step_fwd | needs_step_bwd | needs_step_left | needs_step_right
 
     # Universal Swing Leg Selection (Human Reflex):
     # Lateral push: step with side pushed toward (left if pushed left, right if pushed right)
@@ -271,7 +256,7 @@ def compute_reward(d: mjx.Data, action: jnp.ndarray, prev_act: jnp.ndarray) -> j
     # Mode 1 (Mild Push, needs_step == False): Enforce bilateral flat quiet stance
     # Mode 2 (Violent Push, needs_step == True): Completely liberate swing leg from pose penalties!
     p_load_asym = jnp.where(needs_step, 0.0, 0.0100 * jnp.square(r_sole_z - l_sole_z))
-    p_pose = jnp.where(needs_step, 0.0002, 0.0120) * jnp.sum(jnp.square(leg_qpos - ctrl_nom))
+    p_pose = jnp.where(needs_step, 0.0, 0.0120 * jnp.sum(jnp.square(leg_qpos - ctrl_nom)))
 
     # Planted Stance Foot Slip Penalty (Only punish slip on the planted support foot when stepping)
     p_slip = jnp.where(
@@ -325,7 +310,7 @@ def compute_reward(d: mjx.Data, action: jnp.ndarray, prev_act: jnp.ndarray) -> j
     p_act_rate = 0.0020 * jnp.sum(jnp.square(action - prev_act))
     p_act_mag = 0.0015 * jnp.sum(jnp.square(action))           # Balanced action magnitude penalty
     p_vz = 0.0050 * jnp.square(d.qvel[2])
-    p_squat = jnp.where(pelvis_z < 0.75, 0.50 * jnp.square(0.75 - pelvis_z) * 100.0, 0.0)
+    p_squat = jnp.where(needs_step, 0.0, jnp.where(pelvis_z < 0.75, 0.50 * jnp.square(0.75 - pelvis_z) * 100.0, 0.0))
 
     # Deadband tilt penalty: zero penalty <= 1.5 deg; quadratically penalizes tilt > 1.5 deg
     tilt_rad = jnp.arccos(jnp.clip(torso_up, -1.0, 1.0))
@@ -348,12 +333,92 @@ def compute_reward(d: mjx.Data, action: jnp.ndarray, prev_act: jnp.ndarray) -> j
     return step_rew + fall_pen
 
 # ---------------------------------------------------------------------------
+# SOTA Analytical Capture Point Stepping Reflex & Inverse Kinematics (JAX)
+# ---------------------------------------------------------------------------
+def jax_leg_ik(hip_pos: jnp.ndarray, target_ankle: jnp.ndarray, thigh_len: float = 0.400, shin_len: float = 0.340) -> jnp.ndarray:
+    """Analytical 2-link + spherical hip inverse kinematics for Cyrus 6-DOF leg."""
+    d_vec = target_ankle - hip_pos
+    dx, dy, dz = d_vec[0], d_vec[1], d_vec[2]
+    hip_roll = jnp.arctan2(dy, -dz)
+    d_sag = jnp.sqrt(dx**2 + dz**2)
+    d_clamped = jnp.clip(d_sag, 0.15, (thigh_len + shin_len) * 0.999)
+    cos_knee = (thigh_len**2 + shin_len**2 - d_clamped**2) / (2.0 * thigh_len * shin_len)
+    cos_knee = jnp.clip(cos_knee, -1.0, 1.0)
+    knee = jnp.pi - jnp.arccos(cos_knee)
+    alpha = jnp.arctan2(dx, -dz)
+    cos_beta = (thigh_len**2 + d_clamped**2 - shin_len**2) / (2.0 * thigh_len * d_clamped)
+    cos_beta = jnp.clip(cos_beta, -1.0, 1.0)
+    beta = jnp.arccos(cos_beta)
+    hip_pitch = -(alpha + beta)
+    ankle_pitch = -(hip_pitch + knee)
+    ankle_roll = -hip_roll
+    hip_yaw = 0.0
+    return jnp.array([hip_yaw, hip_roll, hip_pitch, knee, ankle_pitch, ankle_roll], dtype=jnp.float32)
+
+def compute_reflex_step_ctrl(d: mjx.Data) -> jnp.ndarray:
+    """Computes analytical reactive stepping joint targets based on Capture Point dynamics."""
+    omega_0 = 3.538
+    xi_x = d.qpos[0] + (d.qvel[0] / omega_0)
+    xi_y = d.qpos[1] + (d.qvel[1] / omega_0)
+
+    r_sole_x = d.site_xpos[r_sole_id, 0]
+    r_sole_y = d.site_xpos[r_sole_id, 1]
+    l_sole_x = d.site_xpos[l_sole_id, 0]
+    l_sole_y = d.site_xpos[l_sole_id, 1]
+
+    mean_ankle_x = 0.5 * (r_sole_x + l_sole_x)
+    fwd_trigger = mean_ankle_x + 0.120
+    bwd_trigger = mean_ankle_x - 0.050
+
+    needs_step_fwd = xi_x > fwd_trigger
+    needs_step_bwd = xi_x < bwd_trigger
+    needs_step_left = xi_y > (l_sole_y + 0.040)
+    needs_step_right = xi_y < (r_sole_y - 0.040)
+
+    needs_step = needs_step_fwd | needs_step_bwd | needs_step_left | needs_step_right
+
+    swing_is_right = jnp.where(
+        jnp.abs(xi_y) > 0.060,
+        xi_y < 0.0,
+        xi_x > mean_ankle_x
+    )
+
+    x_land = jnp.clip(xi_x + 0.050 * d.qvel[0], mean_ankle_x - 0.35, mean_ankle_x + 0.35)
+    y_land = xi_y + 0.050 * d.qvel[1]
+    y_land_safe = jnp.where(
+        swing_is_right,
+        jnp.minimum(y_land, l_sole_y - 0.120),
+        jnp.maximum(y_land, r_sole_y + 0.120)
+    )
+    z_land = 0.040
+
+    target_ankle = jnp.array([x_land, y_land_safe, z_land])
+    r_hip_pos = jnp.array([d.qpos[0], d.qpos[1] - 0.110, d.qpos[2]])
+    l_hip_pos = jnp.array([d.qpos[0], d.qpos[1] + 0.110, d.qpos[2]])
+
+    swing_hip_pos = jnp.where(swing_is_right, r_hip_pos, l_hip_pos)
+    swing_q = jax_leg_ik(swing_hip_pos, target_ankle)
+
+    roll_shift = 0.060
+    knee_dip = 0.120
+
+    r_stance_q = ctrl_nom[:6].at[1].add(roll_shift).at[3].add(knee_dip).at[5].add(-roll_shift)
+    l_stance_q = ctrl_nom[6:].at[1].add(-roll_shift).at[3].add(knee_dip).at[5].add(roll_shift)
+
+    r_step_ctrl = jnp.where(swing_is_right, swing_q, r_stance_q)
+    l_step_ctrl = jnp.where(swing_is_right, l_stance_q, swing_q)
+    step_ctrl = jnp.concatenate([r_step_ctrl, l_step_ctrl])
+
+    return jnp.where(needs_step, step_ctrl, ctrl_nom)
+
+# ---------------------------------------------------------------------------
 # Physics Step & Parallel Rollout
 # ---------------------------------------------------------------------------
 def single_step(d, action, prev_act, step_cnt, push_vec, push_mag, rng):
-    """Executes 1 RL step (20ms) with instantaneous single-step Dirac-delta velocity pulses and mid-recovery double-taps."""
+    """Executes 1 RL step (20ms) using SOTA Residual Reflex Architecture."""
     action_filtered = (1.0 - EMA_ALPHA) * prev_act + EMA_ALPHA * action
-    target_ctrl = jnp.clip(ctrl_nom + action_filtered * ACTION_SCALE_VEC, ctrl_min, ctrl_max)
+    q_reflex = compute_reflex_step_ctrl(d)
+    target_ctrl = jnp.clip(q_reflex + action_filtered * ACTION_SCALE_VEC, ctrl_min, ctrl_max)
 
     rng, shove_rng, rot_rng, prob_rng, noise_rng = random.split(rng, 5)
 
@@ -668,13 +733,54 @@ def run_full_episode_eval(weights, push_mag, num_episodes=16):
         vx = float(push_mag) * np.cos(ang_rad)
         vy = float(push_mag) * np.sin(ang_rad)
 
+        def compute_eval_reflex():
+            omega_0 = 3.538
+            xi_x = d_eval.qpos[0] + (d_eval.qvel[0] / omega_0)
+            xi_y = d_eval.qpos[1] + (d_eval.qvel[1] / omega_0)
+            r_sole_x, r_sole_y = d_eval.site_xpos[r_s_id, 0], d_eval.site_xpos[r_s_id, 1]
+            l_sole_x, l_sole_y = d_eval.site_xpos[l_s_id, 0], d_eval.site_xpos[l_s_id, 1]
+            mean_ankle_x = 0.5 * (r_sole_x + l_sole_x)
+            needs_step = (xi_x > mean_ankle_x + 0.120) | (xi_x < mean_ankle_x - 0.050) | (xi_y > l_sole_y + 0.040) | (xi_y < r_sole_y - 0.040)
+            if not needs_step:
+                return ctrl_nom_np.copy()
+            swing_is_right = (xi_y < 0.0) if abs(xi_y) > 0.060 else (xi_x > mean_ankle_x)
+            x_land = np.clip(xi_x + 0.050 * d_eval.qvel[0], mean_ankle_x - 0.35, mean_ankle_x + 0.35)
+            y_land = xi_y + 0.050 * d_eval.qvel[1]
+            y_land_safe = min(y_land, l_sole_y - 0.120) if swing_is_right else max(y_land, r_sole_y + 0.120)
+            target_ankle = np.array([x_land, y_land_safe, 0.040], dtype=np.float32)
+            hip_pos = np.array([d_eval.qpos[0], d_eval.qpos[1] - 0.110 if swing_is_right else d_eval.qpos[1] + 0.110, d_eval.qpos[2]], dtype=np.float32)
+
+            d_vec = target_ankle - hip_pos
+            dx, dy, dz = d_vec[0], d_vec[1], d_vec[2]
+            hip_roll = np.arctan2(dy, -dz)
+            d_sag = np.sqrt(dx**2 + dz**2)
+            d_clamped = np.clip(d_sag, 0.15, 0.74 * 0.999)
+            cos_knee = np.clip((0.40**2 + 0.34**2 - d_clamped**2) / (2.0 * 0.40 * 0.34), -1.0, 1.0)
+            knee = np.pi - np.arccos(cos_knee)
+            alpha = np.arctan2(dx, -dz)
+            cos_beta = np.clip((0.40**2 + d_clamped**2 - 0.34**2) / (2.0 * 0.40 * d_clamped), -1.0, 1.0)
+            beta = np.arccos(cos_beta)
+            hip_pitch = -(alpha + beta)
+            swing_q = np.array([0.0, hip_roll, hip_pitch, knee, -(hip_pitch + knee), -hip_roll], dtype=np.float32)
+
+            roll_shift, knee_dip = 0.060, 0.120
+            r_stance_q = ctrl_nom_np[:6].copy()
+            r_stance_q[1] += roll_shift; r_stance_q[3] += knee_dip; r_stance_q[5] -= roll_shift
+            l_stance_q = ctrl_nom_np[6:].copy()
+            l_stance_q[1] -= roll_shift; l_stance_q[3] += knee_dip; l_stance_q[5] += roll_shift
+
+            r_ctrl = swing_q if swing_is_right else r_stance_q
+            l_ctrl = l_stance_q if swing_is_right else swing_q
+            return np.concatenate([r_ctrl, l_ctrl])
+
         survived = True
         for step in range(250):  # Full 5.0 seconds
             t = step * 0.02
             act = policy(obs_buf)
             act_filt = (1.0 - EMA_ALPHA) * prev_act + EMA_ALPHA * act
             prev_act = act_filt.copy()
-            target = ctrl_nom_np + act_filt * act_scale
+            q_ref = compute_eval_reflex()
+            target = q_ref + act_filt * act_scale
             d_eval.ctrl[:] = np.clip(target, m_eval.actuator_ctrlrange[:, 0], m_eval.actuator_ctrlrange[:, 1])
 
             for sub in range(SUBSTEPS):
