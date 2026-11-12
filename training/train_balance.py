@@ -224,6 +224,18 @@ def compute_reward(d: mjx.Data, action: jnp.ndarray, prev_act: jnp.ndarray) -> j
     roll_vel = d.qvel[3]
     leg_qpos = d.qpos[leg_qpos_adr]
 
+    # Inverted pendulum dynamics & capture point
+    omega_0 = 3.538
+    xi_x = d.qpos[0] + (d.qvel[0] / omega_0)
+    xi_y = d.qpos[1] + (d.qvel[1] / omega_0)
+
+    r_sole_x = d.site_xpos[r_sole_id, 0]
+    r_sole_y = d.site_xpos[r_sole_id, 1]
+    r_sole_z = d.site_xpos[r_sole_id, 2]
+    l_sole_x = d.site_xpos[l_sole_id, 0]
+    l_sole_y = d.site_xpos[l_sole_id, 1]
+    l_sole_z = d.site_xpos[l_sole_id, 2]
+
     # Universal Capture Point Trigger Boundaries
     # Forward toe (+0.12m), Backward heel (-0.05m), Lateral bounds (+-0.12m)
     needs_step_fwd   = xi_x > 0.120
