@@ -444,7 +444,7 @@
 
             <!-- ANATOMICAL HUMAN-PROPORTIONED SHOE / FOOT (Standing on Middle of Feet) -->
             <body name="right_foot" pos="0 0 -0.34">
-              <inertial pos="0.01157045 0 0.00820321" mass="2.3396" diaginertia="0.0175966 0.01577655 0.00282786" />
+              <inertial pos="0.01669777 0 0.00754267" mass="2.2218" diaginertia="0.01639163 0.01458621 0.00274707" />
               <joint name="right_ankle_pitch" type="hinge" axis="0 1 0" range="-0.8 0.8" damping="2.5" />
               <joint name="right_ankle_roll" type="hinge" axis="1 0 0" range="-0.4 0.4" damping="2.5" />
 
@@ -513,7 +513,7 @@
 
             <!-- ANATOMICAL HUMAN-PROPORTIONED SHOE / FOOT (Standing on Middle of Feet) -->
             <body name="left_foot" pos="0 0 -0.34">
-              <inertial pos="0.0218251 0 0.00688213" mass="2.1040" diaginertia="0.01518666 0.01339587 0.00266628" />
+              <inertial pos="0.01669777 0 0.00754267" mass="2.2218" diaginertia="0.01639163 0.01458621 0.00274707" />
               <joint name="left_ankle_pitch" type="hinge" axis="0 1 0" range="-0.8 0.8" damping="2.5" />
               <joint name="left_ankle_roll" type="hinge" axis="1 0 0" range="-0.4 0.4" damping="2.5" />
 
