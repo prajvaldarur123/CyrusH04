@@ -460,11 +460,13 @@ def single_step(d, action, prev_act, step_cnt, push_vec, push_mag, rng):
     turb_vx = jnp.where(is_settled, random.normal(turb_rng_x, ()) * turb_scale, 0.0)
     turb_vy = jnp.where(is_settled, random.normal(turb_rng_y, ()) * turb_scale, 0.0)
 
+    push_applied = applied_shove + jnp.array([turb_vx, turb_vy, 0.0])
+
     d_prep = d.replace(
         ctrl=target_ctrl,
-        qvel=d.qvel.at[0].add(applied_shove[0] + turb_vx)
-                   .at[1].add(applied_shove[1] + turb_vy)
-                   .at[4].add(applied_shove[2])
+        qvel=d.qvel.at[0].add(push_applied[0])
+                   .at[1].add(push_applied[1])
+                   .at[4].add(push_applied[2])
     )
 
     # 4 Substeps of 0.005s = 0.02s per RL Action (Exact 50 Hz Control Loop)
