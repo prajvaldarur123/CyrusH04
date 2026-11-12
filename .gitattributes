@@ -1,11 +1,15 @@
 # GitHub Linguist Language Overrides
-# Treat HTML visualizers, dashboards, and documentation assets as vendored / non-detectable
+# Treat HTML visualizers, dashboards, documentation, and shell launch scripts as vendored / non-detectable
 # so repository language statistics accurately reflect 100% Python robotics core.
 docs/** linguist-documentation
 docs/** linguist-vendored
+scripts/** linguist-documentation
+scripts/** linguist-vendored
 *.html -linguist-detectable
 *.html linguist-vendored
 *.html linguist-documentation
 *.htm -linguist-detectable
 *.htm linguist-vendored
 *.htm linguist-documentation
+*.sh -linguist-detectable
+*.sh linguist-vendored
