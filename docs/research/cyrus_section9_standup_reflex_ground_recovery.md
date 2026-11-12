@@ -1,34 +1,32 @@
 # SECTION 9: Multi-Stage Stand-Up Reflex, Ground Recovery & "Hand Re-Latch" Reflex
 
 **Project:** Cyrus-H04 Full-Scale Humanoid Robotics Initiative  
-**Document ID:** `CYRUS-TR-2026-SEC09-REV1`  
+**Document ID:** `CYRUS-TR-2026-SEC09-REV2`  
 **Primary Source Files:**  
-- [`controller/standup_reflex.py`](file:///C:/Users/prajval/robotics/cyrus/controller/standup_reflex.py) ($15.8\,\text{KB}$ — Multi-Stage Stand-Up Controller)  
-- [`envs/standup_env.py`](file:///C:/Users/prajval/robotics/cyrus/envs/standup_env.py) ($34.7\,\text{KB}$ — Reinforcement Learning Stand-Up Environment)  
+- [`controller/standup_reflex.py`](file:///C:/Users/prajval/robotics/cyrus/controller/standup_reflex.py) ($15.8\,\text{KB}$ — Multi-Stage Stand-Up Reflex Engine)  
+- [`envs/standup_env.py`](file:///C:/Users/prajval/robotics/cyrus/envs/standup_env.py) ($34.7\,\text{KB}$ — Gymnasium RL Stand-Up Environment)  
 - [`ghost_stage_targets.py`](file:///C:/Users/prajval/robotics/cyrus/ghost_stage_targets.py) ($5.6\,\text{KB}$ — Invariant Ghost Trajectory Keyframes)  
 - [`ghost_fk_trajectory.json`](file:///C:/Users/prajval/robotics/cyrus/ghost_fk_trajectory.json) & [`ghost_trajectory_dense.json`](file:///C:/Users/prajval/robotics/cyrus/ghost_trajectory_dense.json) ($1.8\,\text{MB}$)  
 - [`ghost_reference_controls.npz`](file:///C:/Users/prajval/robotics/cyrus/ghost_reference_controls.npz) & [`ghost_training_reference.npz`](file:///C:/Users/prajval/robotics/cyrus/ghost_training_reference.npz)  
-- [`checkpoints/standup_champion.zip`](file:///C:/Users/prajval/robotics/cyrus/checkpoints/standup_champion.zip) (Trained champion policy up to $23,040,000$ steps)
+- [`checkpoints/standup_champion.zip`](file:///C:/Users/prajval/robotics/cyrus/checkpoints/standup_champion.zip) (Champion policy trained to $23,040,000$ steps)
 
 ---
 
-## Executive Overview: Beyond Bipedal Recovery Limits
+## 9.1 Motivation: Beyond Bipedal Recovery Limits
 
-While Sections 1 through 7 document the **Hierarchical 3-Tier Standing Balance Controller** (Ankle Strategy $\to$ Upper-Body Angular Momentum $\to$ 3D Stepping Reflex), extreme external disturbances (such as severe shoves $> 0.85\,\text{m/s}$, sudden trip hazards, or aggressive collisions) inevitably violate the bipedal dynamic stability envelope ($\text{Margin of Stability} < 0$).
+While Sections 1 through 7 document the **Hierarchical 3-Tier Standing Balance System** (Ankle Strategy $\to$ Upper-Body Momentum $\to$ 3D Stepping Reflex), extreme external disturbances (such as severe shoves $> 0.85\,\text{m/s}$, high-speed trip hazards, or aggressive multi-body collisions) inevitably violate the bipedal dynamic stability envelope ($\text{Margin of Stability} < 0$).
 
-When the center of mass exits the recoverable capture basin or the pelvis drops below $z < 0.62\,\text{m}$, continuing to force bipedal stepping causes violent ankle roll over-torquing and uncontrolled torso floor impact.
+When the center of mass exits the recoverable capture basin or the pelvis drops below $z < 0.62\,\text{m}$, continuing to force bipedal stepping causes violent ankle roll over-torquing, kinematic self-collision, and uncontrolled torso floor impact.
 
-Cyrus-H04 solves this through a coordinated **Dual-Mode Ground Survival Pipeline**:
-1. **The Hand Re-Latch Reflex (Pre-Fall Intervention):**  
-   An emergency reflex triggered when the robot's tilt exceeds $28.0^\circ$. Cyrus explosively drives its 14-joint hands forward and downward onto the mat within $0.12\,\text{s}$, expanding the Base of Support (BoS) polygon from $0.067\,\text{m}^2$ (dual soles) to **$0.233\,\text{m}^2$ ($+240\%$ quadrupedal area)** to arrest fall momentum before the torso strikes the floor.
-2. **The Multi-Stage Biomechanical Stand-Up Reflex (Post-Fall Ground Recovery):**  
-   An autonomous, zero-external-force get-up controller operating on the full 51-body humanoid anatomy. Moving through 6 rigorously verified stages (from prone or supine floor rest, through a triceps push-up and quadrupedal bear hover, into a deep squat and full $1.54\,\text{m}$ vertical extension), Cyrus stands up at the exact spot where it fell without any skyhook forces or joint limit violations.
+To achieve robust survival in unstructured physical environments, Cyrus-H04 implements a **Dual-Mode Ground Survival Pipeline**:
+1. **The Hand Re-Latch Reflex (Pre-Fall Intervention):** An emergency reflex triggered when the robot's tilt exceeds $28.0^\circ$. Cyrus explosively drives its 14-joint hands forward and downward onto the mat within $0.12\,\text{s}$, expanding the Base of Support (BoS) polygon from $0.067\,\text{m}^2$ (dual soles) to **$0.233\,\text{m}^2$ ($+240\%$ quadrupedal area)** to arrest fall momentum before the torso strikes the floor.
+2. **The Multi-Stage Biomechanical Stand-Up Reflex (Post-Fall Ground Recovery):** An autonomous, zero-external-force get-up controller operating on the full 51-body humanoid anatomy. Moving through 6 rigorously verified stages (from prone or supine floor rest, through a triceps push-up and quadrupedal bear hover, into a deep squat and full $1.54\,\text{m}$ vertical extension), Cyrus stands up at the exact spot where it fell without any skyhook forces or joint limit violations.
 
 ---
 
-## 9.1 The "Hand Re-Latch" Reflex: Quadrupedal Base-of-Support Expansion
+## 9.2 The "Hand Re-Latch" Reflex: Quadrupedal Support Polygon Expansion
 
-### 9.1.1 Biomechanical Fall Arrest Principle
+### 9.2.1 Biomechanical Fall Arrest Principle
 
 In standard bipedal stance, the Base of Support is strictly defined by the convex hull of the two shoe soles:
 
@@ -59,7 +57,7 @@ $$
        A = 0.067 m^2 (Small Basin)                 [Left Foot]                      [Right Foot]
 ```
 
-### 9.1.2 Quadrupedal Kinematic Expansion
+### 9.2.2 Quadrupedal Kinematic Expansion
 
 Upon trigger activation:
 1. Both shoulders drive pitch forward at maximum angular velocity ($\dot{q} = -4.5\,\text{rad/s}$, commanding $q_{\text{shoulder\_pitch}} = -1.28\,\text{rad}$).
@@ -74,7 +72,7 @@ Because $A_{\text{quad}} / A_{\text{biped}} = 3.475$ ($+247.5\%$), the instantan
 
 ---
 
-## 9.2 The 6-Stage Biomechanical Stand-Up Architecture
+## 9.3 The 6-Stage Biomechanical Stand-Up Sequence
 
 Once settled on the mat, [`controller/standup_reflex.py`](file:///C:/Users/prajval/robotics/cyrus/controller/standup_reflex.py) guides the robot through 6 distinct biomechanical stages to transition from ground contact to full erect bipedal balance:
 
@@ -88,7 +86,7 @@ flowchart TD
     S4 --> S5["Stage 5: Full Upright Balance Lock (1.54 m erect standing, zero skyhook forces)"]
 ```
 
-### 9.2.1 Kinematic Keyframe Landmark Coordinates
+### 9.3.1 Kinematic Keyframe Landmark Coordinates
 
 From the verified invariant reference trajectory ([`ghost_stage_targets.py`](file:///C:/Users/prajval/robotics/cyrus/ghost_stage_targets.py)), each stage enforces exact 3D Cartesian coordinates for key body links:
 
@@ -104,16 +102,40 @@ From the verified invariant reference trajectory ([`ghost_stage_targets.py`](fil
 
 ---
 
-## 9.3 Invariant Ghost Trajectory Reference Formulation
+## 9.4 3-Phase Stand-Up Curriculum & Supine Roll-and-Rise
 
-### 9.3.1 Why Tabula-Rasa RL Fails at Stand-Up
-Training a full-scale humanoid to stand up from a flat floor using unguided tabula-rasa RL is notoriously difficult due to:
-1. **Severe Contact Discontinuities:** Making and breaking contact across 4 separate limbs (two 14-joint palms and two high-traction soles) creates highly non-smooth optimization landscapes.
-2. **Pathological Exploration Traps:** Humanoids often discover local energy minima, such as rolling onto their backs and thrashing their legs in the air, or wedging knees into joints that exceed actuator limits.
+In [`envs/standup_env.py`](file:///C:/Users/prajval/robotics/cyrus/envs/standup_env.py#L127-L195), learning is structured into a rigorous **3-Phase Curriculum**:
 
-### 9.3.2 Smooth $C^1$ Hermite Blend Formulation
+```
+PHASE 1: Canonical Prone Get-Up
+-------------------------------
+Robot starts prone (belly on floor) -> Hands post under chest -> Push-up -> Bear-Pike -> Squat -> Full Standing.
 
-To solve this, Cyrus-H04 utilizes a pre-computed Kinematically Invariant Reference Trajectory $\mathbf{q}_{\text{ghost}}(t)$. During transition between stage $k$ and stage $k+1$ over stage duration $T_{\text{stage}} = 1.50\,\text{s}$, the reference pose is interpolated via a smooth $C^1$ cosine blend parameter:
+PHASE 2: Canonical Supine Roll-and-Rise
+---------------------------------------
+Robot starts flat on back (supine, pitched -90 deg) -> Sweeps right arm, flexes waist roll/yaw ->
+Rolls body flank 180 deg onto belly -> Transitions seamlessly into Phase 1 Prone Push-Up.
+
+PHASE 3: Omnidirectional Shoves & Tumbling Rejection
+----------------------------------------------------
+Robot starts erect standing -> Violent 360-degree impulse shoves induce arbitrary tumbling falls ->
+Policy autonomously identifies orientation (prone vs. supine) and executes complete get-up.
+```
+
+### 9.4.1 Supine Flank Roll Kinematics
+
+When Cyrus lands on its back ([`controller/standup_reflex.py`](file:///C:/Users/prajval/robotics/cyrus/controller/standup_reflex.py#L176-L238)), standing up directly through abdominal crunch is kinematically impossible due to the human-like lumbar range of motion. The reflex executes an **Active Flank Roll**:
+1. Lumbar spine drives combined twist: $q_{\text{waist\_roll}} = +0.38\,\text{rad}$ ($+21.8^\circ$) and $q_{\text{waist\_yaw}} = +0.65\,\text{rad}$ ($+37.2^\circ$).
+2. The right arm sweeps across the chest ($q_{\text{shoulder\_pitch}} = -0.90\,\text{rad}$, $q_{\text{shoulder\_roll}} = +0.45\,\text{rad}$) creating an inertial rolling couple.
+3. The right hip adducts ($q_{\text{hip\_roll}} = -0.45\,\text{rad}$) pivoting the pelvis around the lateral femoral border until the torso rolls $180^\circ$ into prone position ($T_{\text{roll}} \approx 1.5\,\text{s}$), where the standard push-up cascade takes over.
+
+---
+
+## 9.5 Invariant Ghost Trajectory Reference Formulation
+
+### 9.5.1 Smooth $C^1$ Hermite Cosine Blend
+
+During transition between stage $k$ and stage $k+1$ over stage duration $T_{\text{stage}} = 1.50\,\text{s}$, the reference pose is interpolated via a smooth $C^1$ cosine blend parameter:
 
 $$
 \alpha(t) = \frac{1}{2}\left(1 - \cos\left(\pi \cdot \frac{t - t_k}{T_{\text{stage}}}\right)\right), \quad \alpha \in [0, 1]
@@ -135,8 +157,22 @@ This guarantees that the agent never explores destructive or kinematically impos
 
 ---
 
+## 9.6 150-Dimensional Whole-Body Proprioceptive Schema
+
+The policy receives a comprehensive **150-Dimensional Proprioceptive State Vector** extracted at $50\,\text{Hz}$ via [`controller/body_schema_observer.py`](file:///C:/Users/prajval/robotics/cyrus/controller/body_schema_observer.py):
+* **Pelvis Root State (13 dims):** Height $z$, orientation quaternion, linear velocity $\mathbf{v}$, and angular velocity $\boldsymbol{\omega}$.
+* **Active 27 Core Joints (54 dims):** Current angular positions $q_j$ and velocities $\dot{q}_j$.
+* **3D Subtree Center of Mass (6 dims):** CoM position $\mathbf{r}_{\text{CoM}}$ and velocity $\mathbf{v}_{\text{CoM}}$ relative to pelvis.
+* **Instantaneous Capture Point & Margin of Stability (4 dims):** 2D Divergent Component of Motion $\boldsymbol{\xi}$ and signed distance to support boundary.
+* **4-Limb Ground Contact Wrenches (12 dims):** Normal contact force and 2D CoP location across both palms and both feet soles.
+* **End-Effector Spatial Vectors (16 dims):** 3D relative vectors from CoM to left/right hands and left/right feet, plus binary contact flags.
+* **Stage & Guidance Features (45 dims):** Active stage index, blend progress $\alpha$, target guidance error $\mathbf{q} - \mathbf{q}_{\text{ref}}$, and anchor drift vector $(\Delta x, \Delta y)$.
+
+---
+
 ## Summary of Section 9 Takeaways
 
-1. **Hand Re-Latch Reflex:** Activated at torso tilt $> 28.0^\circ$ or $z_{\text{pelvis}} < 0.62\,\text{m}$, deploying both 14-joint palms onto the mat within $0.12\,\text{s}$ to expand the support polygon by **$+240\%$ ($0.067\,\text{m}^2 \to 0.233\,\text{m}^2$)**, arresting violent falls.
-2. **6-Stage Biomechanical Stand-Up Reflex:** Progresses through Prone Rest $\to$ Triceps Push-Up $\to$ High Plank $\to$ Bear Hover $\to$ Deep Squat $\to$ Full Erect Standing ($1.54\,\text{m}$ head height) with zero external skyhook forces.
-3. **Ghost Trajectory Invariant Guidance:** Guided by pre-computed $C^1$ smooth Hermite keyframes ([`ghost_trajectory_dense.json`](file:///C:/Users/prajval/robotics/cyrus/ghost_trajectory_dense.json)) preventing local exploration traps and enabling the champion policy to achieve reliable get-up performance across diverse contact conditions.
+1. **Hand Re-Latch Reflex:** Triggered at torso tilt $> 28.0^\circ$ or $z_{\text{pelvis}} < 0.62\,\text{m}$, snapping palms to the floor in $0.12\,\text{s}$ to expand the Support Polygon by **$+240\%$ ($0.067\,\text{m}^2 \to 0.233\,\text{m}^2$)**, arresting violent falls.
+2. **6-Stage Biomechanical Stand-Up Sequence:** Progresses through Prone Rest $\to$ Triceps Push-Up $\to$ High Plank $\to$ Bear Hover $\to$ Deep Squat $\to$ Full Erect Standing ($1.54\,\text{m}$ head height) with zero external skyhook forces.
+3. **3-Phase Curriculum & Supine Roll:** Teaches canonical prone get-up, supine flank rolling, and omnidirectional tumble recovery.
+4. **Ghost Trajectory Invariant Guidance:** Guided by pre-computed $C^1$ smooth Hermite keyframes ([`ghost_trajectory_dense.json`](file:///C:/Users/prajval/robotics/cyrus/ghost_trajectory_dense.json)) eliminating contact exploration traps and enabling the champion policy to achieve reliable get-up performance across diverse contact conditions.
