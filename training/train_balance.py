@@ -402,9 +402,9 @@ def compute_reflex_step_ctrl(d: mjx.Data) -> jnp.ndarray:
         jnp.minimum(y_land, l_sole_y - 0.120),
         jnp.maximum(y_land, r_sole_y + 0.120)
     )
-    z_land = 0.040
-
-    target_ankle = jnp.array([x_land, y_land_safe, z_land])
+    # Dynamic ground clearance: lift swing ankle 5cm (z=0.090m) to completely eliminate foot tripping
+    z_clear = 0.090
+    target_ankle = jnp.array([x_land, y_land_safe, z_clear])
     r_hip_pos = jnp.array([d.qpos[0], d.qpos[1] - 0.110, d.qpos[2]])
     l_hip_pos = jnp.array([d.qpos[0], d.qpos[1] + 0.110, d.qpos[2]])
 
@@ -413,9 +413,10 @@ def compute_reflex_step_ctrl(d: mjx.Data) -> jnp.ndarray:
 
     roll_shift = 0.060
     knee_dip = 0.120
+    ank_pitch_comp = -0.060 # Keeps stance foot sole 100% flat during compliant knee dip
 
-    r_stance_q = ctrl_nom[:6].at[1].add(roll_shift).at[3].add(knee_dip).at[5].add(-roll_shift)
-    l_stance_q = ctrl_nom[6:].at[1].add(-roll_shift).at[3].add(knee_dip).at[5].add(roll_shift)
+    r_stance_q = ctrl_nom[:6].at[1].add(roll_shift).at[3].add(knee_dip).at[4].add(ank_pitch_comp).at[5].add(-roll_shift)
+    l_stance_q = ctrl_nom[6:].at[1].add(-roll_shift).at[3].add(knee_dip).at[4].add(ank_pitch_comp).at[5].add(roll_shift)
 
     r_step_ctrl = jnp.where(swing_is_right, swing_q, r_stance_q)
     l_step_ctrl = jnp.where(swing_is_right, l_stance_q, swing_q)
@@ -767,7 +768,7 @@ def run_full_episode_eval(weights, push_mag, num_episodes=16):
             x_land = np.clip(xi_x + 0.050 * d_eval.qvel[0], mean_ankle_x - 0.35, mean_ankle_x + 0.35)
             y_land = xi_y + 0.050 * d_eval.qvel[1]
             y_land_safe = min(y_land, l_sole_y - 0.120) if swing_is_right else max(y_land, r_sole_y + 0.120)
-            target_ankle = np.array([x_land, y_land_safe, 0.040], dtype=np.float32)
+            target_ankle = np.array([x_land, y_land_safe, 0.090], dtype=np.float32)
             hip_pos = np.array([d_eval.qpos[0], d_eval.qpos[1] - 0.110 if swing_is_right else d_eval.qpos[1] + 0.110, d_eval.qpos[2]], dtype=np.float32)
 
             d_vec = target_ankle - hip_pos
@@ -783,11 +784,11 @@ def run_full_episode_eval(weights, push_mag, num_episodes=16):
             hip_pitch = -(alpha + beta)
             swing_q = np.array([0.0, hip_roll, hip_pitch, knee, -(hip_pitch + knee), -hip_roll], dtype=np.float32)
 
-            roll_shift, knee_dip = 0.060, 0.120
+            roll_shift, knee_dip, ank_pitch_comp = 0.060, 0.120, -0.060
             r_stance_q = ctrl_nom_np[:6].copy()
-            r_stance_q[1] += roll_shift; r_stance_q[3] += knee_dip; r_stance_q[5] -= roll_shift
+            r_stance_q[1] += roll_shift; r_stance_q[3] += knee_dip; r_stance_q[4] += ank_pitch_comp; r_stance_q[5] -= roll_shift
             l_stance_q = ctrl_nom_np[6:].copy()
-            l_stance_q[1] -= roll_shift; l_stance_q[3] += knee_dip; l_stance_q[5] += roll_shift
+            l_stance_q[1] -= roll_shift; l_stance_q[3] += knee_dip; l_stance_q[4] += ank_pitch_comp; l_stance_q[5] += roll_shift
 
             r_ctrl = swing_q if swing_is_right else r_stance_q
             l_ctrl = l_stance_q if swing_is_right else swing_q
