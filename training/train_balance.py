@@ -277,8 +277,8 @@ def compute_reward(d: mjx.Data, action: jnp.ndarray, prev_act: jnp.ndarray) -> j
     p_slip = jnp.where(
         needs_step,
         jnp.where(swing_is_right,
-                  0.0100 * l_contact * jnp.sum(jnp.square(d.qvel[16:18])),
-                  0.0100 * r_contact * jnp.sum(jnp.square(d.qvel[10:12]))),
+                  0.0250 * l_contact * jnp.sum(jnp.square(d.qvel[16:18])),
+                  0.0250 * r_contact * jnp.sum(jnp.square(d.qvel[10:12]))),
         0.0100 * (r_contact * jnp.sum(jnp.square(d.qvel[10:12])) + l_contact * jnp.sum(jnp.square(d.qvel[16:18])))
     )
 
@@ -298,11 +298,22 @@ def compute_reward(d: mjx.Data, action: jnp.ndarray, prev_act: jnp.ndarray) -> j
     swing_y = jnp.where(swing_is_right, r_sole_y, l_sole_y)
     swing_z = jnp.where(swing_is_right, r_sole_z, l_sole_z)
 
+    # Stance leg single-support lateral shift & equilibrium rewards
+    stance_y = jnp.where(swing_is_right, l_sole_y, r_sole_y)
+    stance_z = jnp.where(swing_is_right, l_sole_z, r_sole_z)
+    r_stance_shift = jnp.exp(-jnp.square(d.qpos[1] - stance_y * 0.70) / 0.005)
+    r_stance_planted = jnp.exp(-jnp.square(stance_z) / 0.002)
+    r_stance_roll = jnp.exp(-jnp.square(roll_vel) / 0.05)
+
     # Stepping Rewards (Heavily weighted to dominate standing when pushed violently)
     r_land_x = jnp.exp(-jnp.square(swing_x - x_target) / 0.020)
     r_land_y = jnp.exp(-jnp.square(swing_y - y_target_safe) / 0.020)
     r_clear = jnp.exp(-jnp.square(swing_z - 0.080) / 0.004) # Target 8cm high clear foot lift
-    r_step = jnp.where(needs_step, 0.150 * r_land_x + 0.080 * r_land_y + 0.100 * r_clear, 0.0)
+    r_step = jnp.where(
+        needs_step,
+        0.120 * r_land_x + 0.060 * r_land_y + 0.100 * r_clear + 0.120 * r_stance_shift + 0.080 * r_stance_planted + 0.060 * r_stance_roll,
+        0.0
+    )
 
     # Instantaneous Capture Point (ICP) centering reward
     icp_dist = jnp.hypot(d.qvel[0] / omega_0, d.qvel[1] / omega_0)

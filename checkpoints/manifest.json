@@ -5,7 +5,7 @@
     "status": "baseline_pd v0-draft",
     "protocol_tag": "CALIBRATED_40MS_FORCE_PULSE_V1",
     "file": "balance_12dof_production.npz",
-    "sha256": "fc4fda14c82a95dccfd1fc0dcecd2f44e8769c0156cf947bae3aef4902c35b44",
+    "sha256": "aa784a30b50d7bd764c62446cefc92008572b6956780fab3b3b4b334bf181720",
     "description": "Reference Passive PD Baseline holding Pose C with robust roll gains (Hip 500 / Ankle 400). Action layer is zero. Uncertified draft reference baseline evaluated under protocol CALIBRATED_40MS_FORCE_PULSE_V1.",
     "realized_limits": {
       "sagittal_fwd_dv": 0.4046,
@@ -24,7 +24,7 @@
   },
   "registered_checkpoints": {
     "balance_12dof_production.npz": {
-      "sha256": "fc4fda14c82a95dccfd1fc0dcecd2f44e8769c0156cf947bae3aef4902c35b44",
+      "sha256": "aa784a30b50d7bd764c62446cefc92008572b6956780fab3b3b4b334bf181720",
       "size_bytes": 284918
     },
     "balance_12dof_weights.npz": {

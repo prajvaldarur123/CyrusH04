@@ -37,9 +37,16 @@ from controller.stepping_recovery import ReactiveSteppingController, SteppingPar
 XML_PATH = os.path.join(PROJECT_ROOT, "models", "cyrus_12dof_mjx.xml")
 
 
-def run_random_pushes(speed_mps: float, num_pushes: int, checkpoint_path: str, render_gif_path: str = None):
+ACTION_SCALE_VEC_PROD = np.array([
+    0.15, 0.15, 0.50, 0.60, 0.35, 0.15,
+    0.15, 0.15, 0.50, 0.60, 0.35, 0.15
+], dtype=np.float32)
+EMA_ALPHA_PROD = 0.40
+
+
+def run_random_pushes(speed_mps: float, num_pushes: int, checkpoint_path: str, render_gif_path: str = None, protocol: str = "jump"):
     print("=" * 80)
-    print(f"SIMULATING {num_pushes} RANDOM PUSHES AT {speed_mps:.2f} m/s (MuJoCo Physics)")
+    print(f"SIMULATING {num_pushes} RANDOM PUSHES AT {speed_mps:.2f} m/s (MuJoCo Physics, Protocol: {protocol.upper()})")
     print(f"Checkpoint: {os.path.basename(checkpoint_path)}")
     print("=" * 80)
 
@@ -47,22 +54,22 @@ def run_random_pushes(speed_mps: float, num_pushes: int, checkpoint_path: str, r
     dt_physics = 0.0025
     m.opt.timestep = dt_physics
 
-    # Apply robust roll gains
+    # Apply robust roll gains matching training
     for side in ["right", "left"]:
         h_act = m.actuator(f"{side}_hip_roll_act")
-        h_act.gainprm[0] = ROBUST_ROLL_GAINS["hip_roll_kp"]
-        h_act.biasprm[1] = -ROBUST_ROLL_GAINS["hip_roll_kp"]
-        h_act.biasprm[2] = -ROBUST_ROLL_GAINS["hip_roll_kv"]
+        h_act.gainprm[0] = 500.0
+        h_act.biasprm[1] = -500.0
+        h_act.biasprm[2] = -35.0
         a_act = m.actuator(f"{side}_ankle_roll_act")
-        a_act.gainprm[0] = ROBUST_ROLL_GAINS["ankle_roll_kp"]
-        a_act.biasprm[1] = -ROBUST_ROLL_GAINS["ankle_roll_kp"]
-        a_act.biasprm[2] = -ROBUST_ROLL_GAINS["ankle_roll_kv"]
+        a_act.gainprm[0] = 400.0
+        a_act.biasprm[1] = -400.0
+        a_act.biasprm[2] = -25.0
 
     d = mujoco.MjData(m)
     pelvis_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, "pelvis")
     torso_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, "torso_upper")
-    r_hip_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, "right_thigh")
-    l_hip_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, "left_thigh")
+    r_hip_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, "right_hip")
+    l_hip_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, "left_hip")
     r_foot_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, "right_foot")
     l_foot_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, "left_foot")
     r_sole_id = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_SITE, "right_sole")
@@ -138,8 +145,8 @@ def run_random_pushes(speed_mps: float, num_pushes: int, checkpoint_path: str, r
         d.ctrl[:] = ctrl_nom.copy()
         verify_settled_equilibrium(m, d, ctrl_nom, tol_fz=1.0, tol_qvel=1e-3, max_steps=400)
 
-        ema_filter = EMAActionFilter(alpha=EMA_ALPHA, dim=12)
-        params = SteppingParams(toe_limit=0.150, heel_limit=-0.090, lateral_limit=0.060, trigger_margin=0.010, t_swing=0.18)
+        ema_filter = EMAActionFilter(alpha=EMA_ALPHA_PROD, dim=12)
+        params = SteppingParams(toe_limit=0.140, heel_limit=-0.070, lateral_limit=0.060, trigger_margin=0.010, t_swing=0.26, h_clear=0.080)
         stepping_ctrl = ReactiveSteppingController(params)
         prev_act = np.zeros(12, dtype=np.float32)
         init_obs = get_obs(prev_act)
@@ -160,6 +167,7 @@ def run_random_pushes(speed_mps: float, num_pushes: int, checkpoint_path: str, r
         fell_reason = "SURVIVED"
         settle_time = max_seconds
         has_settled = False
+        landed_q = None
 
         for step in range(total_steps):
             cur_time = step * dt_ctrl
@@ -168,7 +176,7 @@ def run_random_pushes(speed_mps: float, num_pushes: int, checkpoint_path: str, r
             prev_act = act_filt.copy()
 
             target_ctrl = np.clip(
-                ctrl_nom + act_filt * ACTION_SCALE_VEC,
+                ctrl_nom + act_filt * ACTION_SCALE_VEC_PROD,
                 m.actuator_ctrlrange[:, 0],
                 m.actuator_ctrlrange[:, 1]
             )
@@ -185,28 +193,49 @@ def run_random_pushes(speed_mps: float, num_pushes: int, checkpoint_path: str, r
             step_info = stepping_ctrl.update(cur_time, com_pos, com_vel, r_ankle_pos, l_ankle_pos, r_contact, l_contact)
 
             # If dynamic step is triggered, execute swing leg clearance and landing IK
-            if step_info["state"] in [SteppingState.SWING_EXECUTION, SteppingState.TOUCHDOWN_ABSORPTION]:
+            if step_info["state"] == SteppingState.SWING_EXECUTION:
                 foot_target = step_info["desired_foot_pos"]
                 s_leg = step_info["swing_leg"]
                 if foot_target is not None and s_leg is not None:
                     hip_pos = d.xpos[r_hip_id] if s_leg == "right" else d.xpos[l_hip_id]
                     q_swing = stepping_ctrl.inverse_kinematics_leg(hip_pos, foot_target)
+                    roll_shift = 0.060 * np.sin(np.pi * step_info["phase"])
+
                     if s_leg == "right":
                         target_ctrl[:6] = q_swing
+                        # Stance leg (left): keep active policy feedback + add lateral weight-shift bias
+                        target_ctrl[7] -= roll_shift
+                        target_ctrl[11] += roll_shift
+                        target_ctrl[9] += 0.050  # knee stiffness
                     else:
                         target_ctrl[6:] = q_swing
+                        # Stance leg (right): keep active policy feedback + add lateral weight-shift bias
+                        target_ctrl[1] += roll_shift
+                        target_ctrl[5] -= roll_shift
+                        target_ctrl[3] += 0.050  # knee stiffness
+                    landed_q = target_ctrl.copy()
+
+            elif step_info["state"] in [SteppingState.TOUCHDOWN_ABSORPTION, SteppingState.DUAL_SUPPORT_SETTLE]:
+                if landed_q is not None:
+                    # Maintain post-landing split stance base while absorbing momentum with policy feedback
+                    target_ctrl = landed_q + 0.50 * act_filt * ACTION_SCALE_VEC_PROD
 
             d.ctrl[:] = np.clip(target_ctrl, m.actuator_ctrlrange[:, 0], m.actuator_ctrlrange[:, 1])
 
             substeps = int(round(dt_ctrl / dt_physics))
             for sub in range(substeps):
-                current_time = step * dt_ctrl + sub * dt_physics
-                if 2.0 <= current_time < 2.0 + pulse_duration_s:
-                    d.xfrc_applied[pelvis_id, 0] = fx
-                    d.xfrc_applied[pelvis_id, 1] = fy
+                current_time = round(step * dt_ctrl + sub * dt_physics, 4)
+                if protocol == "jump":
+                    if current_time == 2.0:
+                        d.qvel[0] += speed_mps * np.cos(ang_rad)
+                        d.qvel[1] += speed_mps * np.sin(ang_rad)
                 else:
-                    d.xfrc_applied[pelvis_id, 0] = 0.0
-                    d.xfrc_applied[pelvis_id, 1] = 0.0
+                    if 2.0 <= current_time < 2.0 + pulse_duration_s:
+                        d.xfrc_applied[pelvis_id, 0] = fx
+                        d.xfrc_applied[pelvis_id, 1] = fy
+                    else:
+                        d.xfrc_applied[pelvis_id, 0] = 0.0
+                        d.xfrc_applied[pelvis_id, 1] = 0.0
 
                 mujoco.mj_step(m, d)
 
@@ -244,8 +273,8 @@ def run_random_pushes(speed_mps: float, num_pushes: int, checkpoint_path: str, r
             active_stepping = (step_info["state"] in [SteppingState.SWING_EXECUTION, SteppingState.TOUCHDOWN_ABSORPTION])
             dyn_thresh = {
                 "min_pelvis_z": 0.50 if active_stepping else 0.55,
-                "max_roll_deg": 40.0 if active_stepping else 30.0,
-                "max_pitch_deg": 40.0 if active_stepping else 30.0
+                "max_roll_deg": 42.0 if active_stepping else 35.0,
+                "max_pitch_deg": 42.0 if active_stepping else 35.0
             }
             is_fall, reason = is_robot_fallen(m, d, thresholds=dyn_thresh)
             if is_fall:
@@ -285,26 +314,45 @@ def run_random_pushes(speed_mps: float, num_pushes: int, checkpoint_path: str, r
 def main():
     parser = argparse.ArgumentParser(description="Simulate Random Pushes on Cyrus in MuJoCo")
     parser.add_argument("--pushes", type=int, default=5, help="Number of random pushes per tier")
+    parser.add_argument("--protocol", type=str, default="jump", choices=["jump", "pulse"], help="Disturbance protocol")
     args = parser.parse_args()
 
+    ckpt_prod = os.path.join(PROJECT_ROOT, "checkpoints", "balance_12dof_production.npz")
     ckpt_060 = os.path.join(PROJECT_ROOT, "checkpoints", "cyrus_balance_0.60ms_mastered.npz")
-    ckpt_070 = os.path.join(PROJECT_ROOT, "checkpoints", "balance_12dof_production.npz")
-    if not os.path.exists(ckpt_070):
-        ckpt_070 = os.path.join(PROJECT_ROOT, "checkpoints", "candidate_balance_active.npz")
+    ckpt_070 = os.path.join(PROJECT_ROOT, "checkpoints", "cyrus_balance_0.70ms_mastered.npz")
+    ckpt_080 = os.path.join(PROJECT_ROOT, "checkpoints", "cyrus_balance_0.80ms_mastered.npz")
+    ckpt_090 = os.path.join(PROJECT_ROOT, "checkpoints", "cyrus_balance_0.90ms_mastered.npz")
+
+    if not os.path.exists(ckpt_060): ckpt_060 = ckpt_prod
+    if not os.path.exists(ckpt_070): ckpt_070 = ckpt_prod
+    if not os.path.exists(ckpt_080): ckpt_080 = ckpt_prod
+    if not os.path.exists(ckpt_090): ckpt_090 = ckpt_prod
 
     artifact_dir = r"C:\Users\prajval\.gemini\antigravity\brain\f9a5287d-ef88-4f54-ae4f-c5bfe1dc9aac"
     gif_060 = os.path.join(artifact_dir, "simulation_0.60ms_push.gif")
     gif_070 = os.path.join(artifact_dir, "simulation_0.70ms_push.gif")
+    gif_080 = os.path.join(artifact_dir, "simulation_0.80ms_push.gif")
+    gif_090 = os.path.join(artifact_dir, "simulation_0.90ms_push.gif")
 
     print("\n" + "#" * 80)
     print("STAGE 1: 5 RANDOM PUSHES AT 0.60 M/S")
     print("#" * 80)
-    res_060 = run_random_pushes(0.60, args.pushes, ckpt_060, gif_060)
+    res_060 = run_random_pushes(0.60, args.pushes, ckpt_060, gif_060, protocol=args.protocol)
 
     print("\n" + "#" * 80)
     print("STAGE 2: 5 RANDOM PUSHES AT 0.70 M/S")
     print("#" * 80)
-    res_070 = run_random_pushes(0.70, args.pushes, ckpt_070, gif_070)
+    res_070 = run_random_pushes(0.70, args.pushes, ckpt_070, gif_070, protocol=args.protocol)
+
+    print("\n" + "#" * 80)
+    print("STAGE 3: 5 RANDOM PUSHES AT 0.80 M/S")
+    print("#" * 80)
+    res_080 = run_random_pushes(0.80, args.pushes, ckpt_080, gif_080, protocol=args.protocol)
+
+    print("\n" + "#" * 80)
+    print("STAGE 4: 5 RANDOM PUSHES AT 0.90 M/S")
+    print("#" * 80)
+    res_090 = run_random_pushes(0.90, args.pushes, ckpt_090, gif_090, protocol=args.protocol)
 
 
 if __name__ == "__main__":

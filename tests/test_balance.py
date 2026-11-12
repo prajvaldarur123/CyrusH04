@@ -62,17 +62,18 @@ class BalanceTester:
 
         self.pelvis_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "pelvis")
         self.torso_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "torso_upper")
-        self.r_hip_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "right_thigh")
-        self.l_hip_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "left_thigh")
+        self.r_hip_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "right_hip")
+        self.l_hip_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "left_hip")
         self.r_sole_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "right_sole")
         self.l_sole_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "left_sole")
 
         self.stepping_params = SteppingParams(
-            toe_limit=0.150,
-            heel_limit=-0.090,
+            toe_limit=0.140,
+            heel_limit=-0.070,
             lateral_limit=0.060,
             trigger_margin=0.010,
-            t_swing=0.18
+            t_swing=0.26,
+            h_clear=0.080
         )
         self.stepping_ctrl = ReactiveSteppingController(self.stepping_params)
 
@@ -241,12 +242,14 @@ class BalanceTester:
                     q_ik = self.stepping_ctrl.inverse_kinematics_leg(hip_p, target_foot)
                     if sw_leg == "right":
                         target_ctrl[:6] = q_ik
-                        target_ctrl[7] += 0.03
-                        target_ctrl[11] -= 0.03
+                        target_ctrl[7] -= 0.06
+                        target_ctrl[11] += 0.06
+                        target_ctrl[9] += 0.06
                     else:
                         target_ctrl[6:] = q_ik
-                        target_ctrl[1] -= 0.03
-                        target_ctrl[5] += 0.03
+                        target_ctrl[1] += 0.06
+                        target_ctrl[5] -= 0.06
+                        target_ctrl[3] += 0.06
 
             self.data.ctrl[:] = np.clip(target_ctrl, self.model.actuator_ctrlrange[:, 0], self.model.actuator_ctrlrange[:, 1])
 

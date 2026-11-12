@@ -28,19 +28,19 @@ class SteppingState(Enum):
 
 @dataclass
 class SteppingParams:
-    toe_limit: float = 0.160       # Toe edge from ankle: +16.0 cm
-    heel_limit: float = -0.080     # Heel edge from ankle: -8.0 cm
+    toe_limit: float = 0.140       # Toe edge from ankle: +14.0 cm
+    heel_limit: float = -0.070     # Heel edge from ankle: -7.0 cm
     lateral_limit: float = 0.050   # Foot outer edge from ankle: +5.0 cm
-    trigger_margin: float = 0.020  # Safety trigger margin: 2.0 cm
+    trigger_margin: float = 0.010  # Safety trigger margin: 1.0 cm
     k_margin: float = 0.050        # Velocity landing offset coefficient: 0.05 s
-    h_clear: float = 0.070         # Parabolic foot clearance: 7.0 cm
-    t_swing: float = 0.250         # Swing phase duration: 0.25 s
-    t_absorb: float = 0.080        # Touchdown compliance absorption: 0.08 s
+    h_clear: float = 0.080         # Parabolic foot clearance: 8.0 cm
+    t_swing: float = 0.260         # Swing phase duration: 0.26 s
+    t_absorb: float = 0.120        # Touchdown compliance absorption: 0.12 s
     nominal_z_com: float = 0.783   # Nominal center of mass height: 0.783 m
     gravity: float = 9.80665       # Gravitational acceleration
-    thigh_len: float = 0.200       # Cyrus thigh link length (hip to knee)
-    shin_len: float = 0.340        # Cyrus shin link length (knee to ankle)
-    ankle_to_sole: float = 0.045   # Ankle center to foot sole
+    thigh_len: float = 0.400       # Cyrus thigh link length (hip to knee): exactly 0.400m
+    shin_len: float = 0.340        # Cyrus shin link length (knee to ankle): exactly 0.340m
+    ankle_to_sole: float = 0.040   # Ankle center to foot sole
 
 class ReactiveSteppingController:
     def __init__(self, params: Optional[SteppingParams] = None):
@@ -196,6 +196,28 @@ class ReactiveSteppingController:
             "target_pos": None
         }
 
+    def get_stance_compensation(self, swing_leg: str, phase: float, ctrl_nom: np.ndarray) -> np.ndarray:
+        """
+        Computes single-support stance leg weight-shift and lateral balance compensation.
+        Shifts CoM over the stance foot sole via stance hip-roll adduction and knee stiffness.
+        """
+        stance_ctrl = ctrl_nom.copy()
+        roll_shift = 0.050 * np.sin(np.pi * phase)
+        knee_stiff = 0.060
+
+        if swing_leg == "right":
+            # Left leg is stance leg
+            stance_ctrl[7] -= roll_shift   # Left hip roll tilts pelvis left over left sole
+            stance_ctrl[11] += roll_shift  # Left ankle roll maintains flat sole contact
+            stance_ctrl[9] += knee_stiff   # Left knee extension compensation for 2x body load
+        else:
+            # Right leg is stance leg
+            stance_ctrl[1] += roll_shift   # Right hip roll tilts pelvis right over right sole
+            stance_ctrl[5] -= roll_shift   # Right ankle roll maintains flat sole contact
+            stance_ctrl[3] += knee_stiff   # Right knee extension compensation for 2x body load
+
+        return stance_ctrl
+
     def inverse_kinematics_leg(self, hip_pos: np.ndarray, target_ankle_pos: np.ndarray) -> np.ndarray:
         """
         Analytical 2-link + spherical hip inverse kinematics for Cyrus 6-DOF leg.
@@ -213,7 +235,7 @@ class ReactiveSteppingController:
         L2 = self.p.shin_len
         
         # Clip to reachability
-        d_clamped = np.clip(d_sag, 0.15, (L1 + L2) * 0.99)
+        d_clamped = np.clip(d_sag, 0.15, (L1 + L2) * 0.999)
         
         # Law of cosines for knee angle
         cos_knee = (L1**2 + L2**2 - d_clamped**2) / (2.0 * L1 * L2)
