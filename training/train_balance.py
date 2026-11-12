@@ -413,7 +413,8 @@ def single_step(d, action, prev_act, step_cnt, push_vec, push_mag, rng):
     )
     final_step = jnp.where(is_done, 0, step_cnt + 1)
     final_act = jnp.where(is_done, jnp.zeros(12), action_filtered)
-    final_push_vec = jnp.where(is_done, jnp.zeros(3), cur_push_vec)
+    # Retain the active shove vector across reset so directional failure attribution is physically accurate
+    final_push_vec = cur_push_vec
 
     return final_d, obs, priv, reward, is_fall, is_done, final_step, final_act, final_push_vec, rng
 
@@ -560,12 +561,15 @@ def train_iteration(ts, d_batch, obs_act_batch, acts_batch, steps_batch, priv_ba
     mean_tilt_deg = jnp.mean(jnp.arccos(jnp.clip(torso_up_batch, -1.0, 1.0)) * (180.0 / jnp.pi))
     mean_effort = jnp.mean(jnp.abs(traj["action"])) * 100.0
 
-    # 4-Way Directional Radar
+    # 4-Way Directional Radar: strictly evaluate only humanoids that actually received directional shoves
+    push_mag_batch = jnp.hypot(push_vecs_batch[:, 0], push_vecs_batch[:, 1])
+    has_push_mask = push_mag_batch > 0.05
     push_angles = (jnp.arctan2(push_vecs_batch[:, 1], push_vecs_batch[:, 0]) * (180.0 / jnp.pi)) % 360.0
-    front_mask = (push_angles >= 315.0) | (push_angles < 45.0)
-    left_mask  = (push_angles >= 45.0)  & (push_angles < 135.0)
-    back_mask  = (push_angles >= 135.0) & (push_angles < 225.0)
-    right_mask = (push_angles >= 225.0) & (push_angles < 315.0)
+
+    front_mask = has_push_mask & ((push_angles >= 315.0) | (push_angles < 45.0))
+    left_mask  = has_push_mask & ((push_angles >= 45.0)  & (push_angles < 135.0))
+    back_mask  = has_push_mask & ((push_angles >= 135.0) & (push_angles < 225.0))
+    right_mask = has_push_mask & ((push_angles >= 225.0) & (push_angles < 315.0))
 
     n_f, n_l, n_b, n_r = jnp.sum(front_mask), jnp.sum(left_mask), jnp.sum(back_mask), jnp.sum(right_mask)
     surv_f = jnp.where(n_f > 0, (jnp.sum(front_mask & ~fallen_envs) / jnp.maximum(1, n_f)) * 100.0, 100.0)
@@ -801,14 +805,15 @@ def main():
         if update == 1:
             print(f"[+] Asymmetric XLA Kernels Compiled in {time.time() - t_compile:.1f}s! Swarm Operating at Maximum Speed (~10s/iter):\n", flush=True)
 
-        # Check consecutive 10.0s survival streak (80%+ swarm survival and athletic tilt <= 15 deg)
-        is_successful_stand = (std_pct >= 80.0) and (height >= 0.80) and (tilt <= 15.0)
-        if is_successful_stand:
+        # Strict Zero-Tolerance Stability Audit Standard: 100.0% Survival Required to Advance Streak
+        num_falls = N_ENVS - num_std
+        is_zero_fall = (num_falls == 0) and (height >= 0.80) and (tilt <= 15.0)
+        if is_zero_fall:
             consecutive_survivals += 1
-            status_text = f"STREAK ADVANCED (+1) -> {consecutive_survivals} consecutive stable iterations"
+            status_text = f"STREAK ADVANCED (+1) -> {consecutive_survivals} consecutive ZERO-FALL iterations (1,024/1,024)"
         else:
             consecutive_survivals = 0
-            status_text = f"STREAK RESET (Stood {std_pct:.1f}%, needed >= 80.0%)"
+            status_text = f"STREAK RESET: {num_falls} fallen humanoids detected! (Zero-fall standard required: 1,024/1,024)"
 
         # Descriptive tags
         if effort < 25.0:
@@ -818,12 +823,12 @@ def main():
         else:
             effort_desc = "High Exertion"
 
-        if score >= 90.0:
-            score_grade = "SOTA Grade"
-        elif score >= 80.0:
-            score_grade = "Stable Grade"
+        if num_falls > 0:
+            score_grade = f"Fallen ({num_falls} drops)"
+        elif score >= 90.0:
+            score_grade = "SOTA Grade (Zero Falls)"
         else:
-            score_grade = "Recovering"
+            score_grade = "Stable Grade (Zero Falls)"
 
         promo_pct = int((consecutive_survivals / float(TARGET_CONSECUTIVE)) * 100.0)
         filled = int((consecutive_survivals / float(TARGET_CONSECUTIVE)) * 20)
