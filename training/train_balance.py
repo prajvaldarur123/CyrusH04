@@ -925,6 +925,7 @@ def main():
         surv_r = float(metrics_cpu["surv_right"])
         score = float(metrics_cpu["balance_score"])
         unitree_ret = float(metrics_cpu["mean_rew"]) * 500.0
+        del m_dict, metrics_cpu
 
         total_steps += N_ENVS * ROLLOUT_STEPS
         iter_dur = time.time() - t0
