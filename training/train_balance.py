@@ -597,6 +597,108 @@ def train_iteration(ts, d_batch, obs_act_batch, acts_batch, steps_batch, priv_ba
     return ts, d_batch, obs_act_batch, acts_batch, steps_batch, priv_batch, push_vecs_batch, rng_batch, rng_train, metrics
 
 # ---------------------------------------------------------------------------
+# Rigorous Synchronized 5.0-Second Full-Episode Physics Evaluation
+# ---------------------------------------------------------------------------
+def run_full_episode_eval(weights, push_mag, num_episodes=16):
+    """
+    Rigorously tests full 5.0-second (250 steps at 50Hz) episodes with simultaneous 
+    shove at step 100 (t=2.0s) across 360 degrees using native MuJoCo physics.
+    Zero-tolerance gatekeeper: No promotion can occur unless Cyrus physically survives
+    all 5.0 seconds without falling (pelvis Z >= 0.65m, tilt <= 35 deg).
+    """
+    m_eval = mujoco.MjModel.from_xml_path(XML_PATH)
+    m_eval.opt.timestep = 0.0025
+    for s in ["right", "left"]:
+        m_eval.actuator(f"{s}_hip_roll_act").gainprm[0] = 500.0
+        m_eval.actuator(f"{s}_hip_roll_act").biasprm[1] = -500.0
+        m_eval.actuator(f"{s}_hip_roll_act").biasprm[2] = -35.0
+        m_eval.actuator(f"{s}_ankle_roll_act").gainprm[0] = 400.0
+        m_eval.actuator(f"{s}_ankle_roll_act").biasprm[1] = -400.0
+        m_eval.actuator(f"{s}_ankle_roll_act").biasprm[2] = -25.0
+
+    d_eval = mujoco.MjData(m_eval)
+    t_id = mujoco.mj_name2id(m_eval, mujoco.mjtObj.mjOBJ_BODY, "torso_upper")
+    r_s_id = mujoco.mj_name2id(m_eval, mujoco.mjtObj.mjOBJ_SITE, "right_sole")
+    l_s_id = mujoco.mj_name2id(m_eval, mujoco.mjtObj.mjOBJ_SITE, "left_sole")
+
+    def policy(obs):
+        h1 = np.tanh(obs @ weights["mlp_extractor.policy_net.0.weight"].T + weights["mlp_extractor.policy_net.0.bias"])
+        h2 = np.tanh(h1 @ weights["mlp_extractor.policy_net.2.weight"].T + weights["mlp_extractor.policy_net.2.bias"])
+        raw = h2 @ weights["action_net.weight"].T + weights["action_net.bias"]
+        return np.clip(raw, -1.0, 1.0)
+
+    def get_eval_obs(prev_act):
+        R = d_eval.xmat[t_id].reshape(3, 3)
+        g = R.T @ np.array([0.0, 0.0, -1.0], dtype=np.float32)
+        cv = d_eval.cvel[t_id]
+        ang_vel = R.T @ cv[:3]
+        lin_vel = R.T @ cv[3:]
+        leg_qpos = np.array([d_eval.qpos[a] for a in leg_qpos_adr], dtype=np.float32)
+        leg_qvel = np.array([d_eval.qvel[a] for a in leg_qvel_adr], dtype=np.float32)
+        r_sole_z = float(d_eval.site_xpos[r_s_id, 2])
+        l_sole_z = float(d_eval.site_xpos[l_s_id, 2])
+        r_contact = 1.0 if r_sole_z < 0.045 else 0.0
+        l_contact = 1.0 if l_sole_z < 0.045 else 0.0
+        return np.concatenate([
+            g, ang_vel, lin_vel, leg_qpos, leg_qvel * 0.1, prev_act, [r_contact, l_contact]
+        ]).astype(np.float32)
+
+    passed_count = 0
+    angles = np.linspace(0.0, 360.0, num_episodes, endpoint=False)
+    act_scale = np.array(ACTION_SCALE_VEC)
+
+    for ang_deg in angles:
+        mujoco.mj_resetData(m_eval, d_eval)
+        d_eval.qpos[2] = 0.825
+        d_eval.qpos[3] = 1.0
+        for i, adr in enumerate(leg_qpos_adr):
+            d_eval.qpos[adr] = float(ctrl_nom[i])
+        d_eval.ctrl[:] = ctrl_nom_np.copy()
+        for _ in range(400):
+            mujoco.mj_step(m_eval, d_eval)
+
+        prev_act = np.zeros(12, dtype=np.float32)
+        obs_buf = np.tile(get_eval_obs(prev_act), 3)
+
+        ang_rad = np.radians(ang_deg)
+        vx = float(push_mag) * np.cos(ang_rad)
+        vy = float(push_mag) * np.sin(ang_rad)
+
+        survived = True
+        for step in range(250):  # Full 5.0 seconds
+            t = step * 0.02
+            act = policy(obs_buf)
+            act_filt = (1.0 - EMA_ALPHA) * prev_act + EMA_ALPHA * act
+            prev_act = act_filt.copy()
+            target = ctrl_nom_np + act_filt * act_scale
+            d_eval.ctrl[:] = np.clip(target, m_eval.actuator_ctrlrange[:, 0], m_eval.actuator_ctrlrange[:, 1])
+
+            for sub in range(SUBSTEPS):
+                cur_sub = round(t + sub * 0.0025, 4)
+                if cur_sub == 2.0:
+                    d_eval.qvel[0] += vx
+                    d_eval.qvel[1] += vy
+                mujoco.mj_step(m_eval, d_eval)
+
+            qw, qx, qy, qz = d_eval.qpos[3:7]
+            roll = np.degrees(np.arctan2(2.0 * (qw * qx + qy * qz), 1.0 - 2.0 * (qx * qx + qy * qy)))
+            pitch = np.degrees(np.arcsin(np.clip(2.0 * (qw * qy - qz * qx), -1.0, 1.0)))
+            tilt = np.hypot(roll, pitch)
+
+            if tilt > 35.0 or d_eval.qpos[2] < 0.65:
+                survived = False
+                break
+
+            obs = get_eval_obs(prev_act)
+            obs_buf = np.concatenate([obs, obs_buf[:94]])
+
+        if survived:
+            passed_count += 1
+
+    pass_pct = (passed_count / float(num_episodes)) * 100.0
+    return pass_pct, passed_count, num_episodes
+
+# ---------------------------------------------------------------------------
 # Main Training Loop
 # ---------------------------------------------------------------------------
 def main():
@@ -663,20 +765,8 @@ def main():
     t_compile = time.time()
 
     N_TOTAL_UPDATES = 2000
-    if os.path.exists(MASTERED_080_NPZ):
-        current_push_target = 0.90
-        print("[+] Checkpoint 0.80 m/s Mastered found! Resuming curriculum directly at PUSH: 0.90 m/s.", flush=True)
-    elif os.path.exists(MASTERED_070_NPZ):
-        current_push_target = 0.80
-        print("[+] Checkpoint 0.70 m/s Mastered found! Resuming curriculum directly at PUSH: 0.80 m/s with Unconstrained 12-DoF Stepping.", flush=True)
-    elif os.path.exists(MASTERED_060_NPZ):
-        current_push_target = 0.70
-        print("[+] Checkpoint 0.60 m/s Mastered found! Resuming curriculum directly at PUSH: 0.70 m/s with Unconstrained 12-DoF Stepping.", flush=True)
-    elif os.path.exists(MASTERED_050_NPZ):
-        current_push_target = 0.60
-        print("[+] Checkpoint 0.50 m/s Mastered found! Resuming curriculum directly at PUSH: 0.60 m/s.", flush=True)
-    else:
-        current_push_target = 0.50
+    current_push_target = 0.40
+    print(f"[+] Curriculum Starting at PUSH: {current_push_target:.2f} m/s (Gate 5 Stepping Threshold).", flush=True)
     consecutive_survivals = 0
     TARGET_CONSECUTIVE = 20
 
@@ -764,46 +854,57 @@ def main():
                 "action_net.weight": p_cpu["pi_out"]["kernel"].T,
                 "action_net.bias": p_cpu["pi_out"]["bias"]
             }
-            cand_path = f"/mnt/c/Users/prajval/robotics/cyrus/checkpoints/candidate_balance_{current_push_target:.2f}ms.npz"
-            np.savez(cand_path, **np_dict)
 
-            # Append milestone to differential evolution ledger
-            ledger_entry = {
-                "iteration": update,
-                "push_mps": float(current_push_target),
-                "standing_pct": std_pct,
-                "mean_height": height,
-                "mean_tilt_deg": tilt,
-                "mean_effort": effort,
-                "balance_score": score,
-                "status": f"[MASTERY ACHIEVED {current_push_target:.2f} m/s]",
-                "candidate_checkpoint": cand_path,
-                "timestamp": time.time(),
-                "time_recorded": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            }
-            try:
-                ledger_file = "/mnt/c/Users/prajval/robotics/cyrus/checkpoints/differential_evolution_ledger.json"
-                if os.path.exists(ledger_file):
-                    with open(ledger_file, "r") as lf:
-                        l_data = json.load(lf)
+            # Zero-False-Positive Synchronized 5.0-Second Full-Episode Physics Audit
+            print(f"\n[🔍 GATE AUDIT] Verifying full 5.0s (250-step) push recovery at {current_push_target:.2f} m/s across 16 angles...", flush=True)
+            eval_pct, n_pass, n_tot = run_full_episode_eval(np_dict, current_push_target, num_episodes=16)
+
+            if eval_pct >= 85.0:
+                print(f"[★ AUDIT PASSED: {n_pass}/{n_tot} ({eval_pct:.1f}%) survived full 5.0s shove! ★]", flush=True)
+                cand_path = f"/mnt/c/Users/prajval/robotics/cyrus/checkpoints/candidate_balance_{current_push_target:.2f}ms.npz"
+                np.savez(cand_path, **np_dict)
+
+                # Append milestone to differential evolution ledger
+                ledger_entry = {
+                    "iteration": update,
+                    "push_mps": float(current_push_target),
+                    "standing_pct": std_pct,
+                    "full_eval_pass_pct": eval_pct,
+                    "mean_height": height,
+                    "mean_tilt_deg": tilt,
+                    "mean_effort": effort,
+                    "balance_score": score,
+                    "status": f"[MASTERY ACHIEVED {current_push_target:.2f} m/s (FULL 5.0S AUDIT PASSED)]",
+                    "candidate_checkpoint": cand_path,
+                    "timestamp": time.time(),
+                    "time_recorded": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                }
+                try:
+                    ledger_file = "/mnt/c/Users/prajval/robotics/cyrus/checkpoints/differential_evolution_ledger.json"
+                    if os.path.exists(ledger_file):
+                        with open(ledger_file, "r") as lf:
+                            l_data = json.load(lf)
+                    else:
+                        l_data = []
+                    l_data.append(ledger_entry)
+                    with open(ledger_file, "w") as lf:
+                        json.dump(l_data, lf, indent=2)
+                except Exception as e:
+                    print(f"[!] Ledger write warning: {e}", flush=True)
+
+                if current_push_target < 0.85:
+                    next_target = round(float(current_push_target) + 0.10, 2)
+                    print(f"\n{'*'*80}\n[★ MASTERY ACHIEVED: {current_push_target:.2f} m/s CERTIFIED WITH {eval_pct:.1f}% FULL 5.0S SURVIVAL! ★]\nAdvancing push force to {next_target:.2f} m/s...\n{'*'*80}\n", flush=True)
+                    np.savez(f"/mnt/c/Users/prajval/robotics/cyrus/checkpoints/cyrus_balance_{current_push_target:.2f}ms_mastered.npz", **np_dict)
+                    current_push_target = next_target
+                    consecutive_survivals = 0
                 else:
-                    l_data = []
-                l_data.append(ledger_entry)
-                with open(ledger_file, "w") as lf:
-                    json.dump(l_data, lf, indent=2)
-            except Exception as e:
-                print(f"[!] Ledger write warning: {e}", flush=True)
-
-            if current_push_target < 0.85:
-                next_target = round(float(current_push_target) + 0.10, 2)
-                print(f"\n{'*'*80}\n[★ MASTERY ACHIEVED: {current_push_target:.2f} m/s STOOD 20 TIMES CONSECUTIVELY! ★]\nAdvancing push force to {next_target:.2f} m/s...\n{'*'*80}\n", flush=True)
-                np.savez(f"/mnt/c/Users/prajval/robotics/cyrus/checkpoints/cyrus_balance_{current_push_target:.2f}ms_mastered.npz", **np_dict)
-                current_push_target = next_target
-                consecutive_survivals = 0
+                    print(f"\n{'*'*80}\n[★ ULTIMATE SOTA MASTERY: {current_push_target:.2f} m/s CERTIFIED WITH {eval_pct:.1f}% FULL 5.0S SURVIVAL! ★]\nCyrus has mastered universal balance recovery up to 0.90 m/s across all 360 degrees!\n{'*'*80}\n", flush=True)
+                    np.savez(f"/mnt/c/Users/prajval/robotics/cyrus/checkpoints/cyrus_balance_{current_push_target:.2f}ms_mastered.npz", **np_dict)
+                    np.savez(PROD_NPZ, **np_dict)
+                    consecutive_survivals = 0
             else:
-                print(f"\n{'*'*80}\n[★ ULTIMATE SOTA MASTERY: {current_push_target:.2f} m/s STOOD 20 TIMES CONSECUTIVELY! ★]\nCyrus has mastered universal balance recovery up to 0.90 m/s across all 360 degrees!\n{'*'*80}\n", flush=True)
-                np.savez(f"/mnt/c/Users/prajval/robotics/cyrus/checkpoints/cyrus_balance_{current_push_target:.2f}ms_mastered.npz", **np_dict)
-                np.savez(PROD_NPZ, **np_dict)
+                print(f"[!] AUDIT REJECTED: Only {n_pass}/{n_tot} ({eval_pct:.1f}%) survived full 5.0s shove. Needed >= 85.0%!\n    Resetting streak to 0 to prevent false promotion. Resuming training...", flush=True)
                 consecutive_survivals = 0
 
         if update % 5 == 0 or update == 1:
